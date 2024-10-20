@@ -1,10 +1,14 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ValidationError
+import re
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Загрузите переменные из .env файла
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -51,8 +55,9 @@ ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_PASSWORD_MIN_LENGTH = 10
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 3
-ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300
+ACCOUNT_RATE_LIMITS = {
+    'login_failed': '5/60s'  # 5 неудачных попыток за 60 секунд
+}
 LOGIN_REDIRECT_URL = '/custom-redirect/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'  # URL, на который перенаправляется пользователь после выхода
 
@@ -107,6 +112,51 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
+class MinimumNumberValidator:
+    def __init__(self, min_numbers=1):
+        self.min_numbers = min_numbers
+
+    def validate(self, password, user=None):  # noqa: ARG002
+        if len(re.findall(r'\d', password)) < self.min_numbers:
+            raise ValidationError(
+                f'This password must contain at least {self.min_numbers} digit(s).',
+                code='password_no_number',
+            )
+
+    def get_help_text(self):
+        return f'Your password must contain at least {self.min_numbers} digit(s).'
+
+
+class MinimumUppercaseValidator:
+    def __init__(self, min_uppercase=1):
+        self.min_uppercase = min_uppercase
+
+    def validate(self, password, user=None):  # noqa: ARG002
+        if len(re.findall(r'[A-Z]', password)) < self.min_uppercase:
+            raise ValidationError(
+                f'This password must contain at least {self.min_uppercase} uppercase letter(s).',
+                code='password_no_uppercase',
+            )
+
+    def get_help_text(self):
+        return f'Your password must contain at least {self.min_uppercase} uppercase letter(s).'
+
+
+class MinimumLowercaseValidator:
+    def __init__(self, min_lowercase=1):
+        self.min_lowercase = min_lowercase
+
+    def validate(self, password, user=None):  # noqa: ARG002
+        if len(re.findall(r'[a-z]', password)) < self.min_lowercase:
+            raise ValidationError(
+                f'This password must contain at least {self.min_lowercase} lowercase letter(s).',
+                code='password_no_lowercase',
+            )
+
+    def get_help_text(self):
+        return f'Your password must contain at least {self.min_lowercase} lowercase letter(s).'
+
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -121,22 +171,19 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumNumberValidator',
+        'NAME': 'myproject.settings.MinimumNumberValidator',
         'OPTIONS': {
             'min_numbers': 1,
         }
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumUppercaseValidator',
+        'NAME': 'myproject.settings.MinimumUppercaseValidator',
         'OPTIONS': {
             'min_uppercase': 1,
         }
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLowercaseValidator',
+        'NAME': 'myproject.settings.MinimumLowercaseValidator',
         'OPTIONS': {
             'min_lowercase': 1,
         }
@@ -149,7 +196,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'ru'
 
-TIME_ZONE = 'UTC+3:00'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
