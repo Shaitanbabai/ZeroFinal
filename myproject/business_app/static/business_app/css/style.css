@@ -16,7 +16,7 @@ html, body {
    Стили для шапки
    ============================== */
 .header {
-    background-color: #f8f9fa;
+    background-color: #7FFF00; /* Салатовый цвет */
     padding: 10px 0;
     text-align: center;
 }
@@ -37,7 +37,7 @@ html, body {
    Стили для футера
    ============================== */
 .footer {
-    background-color: #f1f1f1; /* Убедитесь, что этот цвет соответствует вашему дизайну */
+    background-color: #59B300; /* На 30% темнее салатового */
     padding: 10px 0;
     text-align: center;
 }

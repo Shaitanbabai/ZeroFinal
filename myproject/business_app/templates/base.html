@@ -1,18 +1,20 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}FlowerLover{% endblock %}</title>
+    <!-- Подключаем Bootstrap -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{% static 'myproject/business_app/static/business_app/css/style.css' %}" rel="stylesheet">
+     <!-- Подключаем пользовательские стили, добавляя версию для предотвращения кэширования -->
+    <link href="{% static 'business_app/css/style.css' %}" rel="stylesheet">
 </head>
 <body>
     <div class="content-wrapper">
         <!-- Header -->
         <div class="header d-flex align-items-center">
-            <img src="{% static 'myproject/business_app/static/business_app/images/logo_green.png' %}" alt="Logo">
+            <img src="{% static 'business_app/images/logo_green.png' %}" alt="Logo">
             <div class="site-title">FlowerLover</div>
         </div>
 
