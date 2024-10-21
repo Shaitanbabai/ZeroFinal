@@ -5,7 +5,9 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required
 from django.views import View
 from django.urls import reverse
+from .forms import RegistrationForm, LoginForm
 import logging
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -15,19 +17,18 @@ def main_page(request):
 
 class AuthorizationView(View):
     def get(self, request):
-        return render(request, 'business_app/authorization.html')
+        form = LoginForm()
+        return render(request, 'business_app/authorization.html', {'form': form})
 
     def post(self, request):
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        user = authenticate(request, username=email, password=password)
-
-        if user is not None:
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
             login(request, user)
             logger.info(f"User {user.username} logged in.")
             return redirect_user_based_on_group(user)
         else:
-            context = {'error': 'Invalid email or password'}
+            context = {'form': form, 'errors': form.errors}
             return render(request, 'business_app/authorization.html', context)
 
 @login_required
@@ -58,14 +59,13 @@ def profile(request):
 
 class RegistrationView(View):
     def get(self, request):
-        form = UserCreationForm()
+        form = RegistrationForm()
         return render(request, 'business_app/registration.html', {'form': form})
 
     def post(self, request):
-        form = UserCreationForm(request.POST)
+        form = RegistrationForm(request.POST)
         if form.is_valid():
-            user= form.save()
-            # Удален блок try-except
+            user = form.save()
             customer_group = Group.objects.get(name='customer')
             user.groups.add(customer_group)
             login(request, user)

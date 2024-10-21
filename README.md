@@ -1,22 +1,46 @@
-business_app/
-    ├── migrations/
-    ├── static/
-    │   └── business_app/
-    │       ├── css/
-    │       ├── js/
-    │       └── images/
-    ├── templates/
-    │   └── business_app/
-    │       ├── base.html
-    │       ├── product_list.html
-    │       └── checkout.html
-    ├── __init__.py
-    ├── admin.py
-    ├── apps.py
-    ├── models.py
-    ├── tests.py
-    ├── urls.py
-    └── views.py
+myproject/
+├── business_app
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── forms.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── urls.py
+│   ├── views.py
+│   └──migrations
+│   │     └── __init__.py
+│   │          
+│   └── static
+│   │   └── business_app
+│   │       ├── css
+│   │       │    └──style.css      
+│   │       ├── images
+│   │       │   └──logo_green.png       
+│   │       └──js
+│   └─ templates
+│       ├── base.html    
+│       └──business_app
+│           ├── authorization.html
+│           ├── main_page.html
+│           ├── page_404.html
+│           ├── password_request.html
+│           ├── password_reset.html
+│           ├── profile.html
+│           ├── purchase.html
+│           ├── registration.html
+│           └── sale.html
+│        
+├── media
+│   └─ myproject
+│       ├── __init__.py   
+│       ├── asgi.py
+│       ├── settings.py
+│       ├── urls.py
+│       └── wsgi.py
+├── db.sqlite3
+├── manage.py       
+└── structure.txt 
 
 Добавлю контекст. Общая функциональность сайта будет такова:
 

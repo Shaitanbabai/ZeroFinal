@@ -1,0 +1,119 @@
+/* ==============================
+   Общие стили для страницы
+   ============================== */
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-wrapper {
+    flex: 1;
+}
+
+/* ==============================
+   Стили для шапки
+   ============================== */
+.header {
+    background-color: #f8f9fa;
+    padding: 10px 0;
+    text-align: center;
+}
+
+.header img {
+    height: 50px;
+    margin: 10px;
+}
+
+.site-title {
+    font-family: 'Cursive', sans-serif;
+    font-weight: bold;
+    font-size: 18px;
+    margin-left: 10px;
+}
+
+/* ==============================
+   Стили для футера
+   ============================== */
+.footer {
+    background-color: #f1f1f1; /* Убедитесь, что этот цвет соответствует вашему дизайну */
+    padding: 10px 0;
+    text-align: center;
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.contacts, .social-icons {
+    display: flex;
+    gap: 15px;
+}
+
+.social-icons a {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+}
+
+.social-icons img {
+    margin-right: 5px;
+}
+
+/* ==============================
+   Навигационное меню
+   ============================== */
+.navigation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-button {
+    background-color: #28a745; /* Зеленый цвет */
+    color: #f7e7ce; /* Шампань */
+    border: none;
+    border-radius: 20px;
+    padding: 5px 15px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.nav-button:hover {
+    background-color: #218838; /* Темнее при наведении */
+}
+
+/* ==============================
+   Каталог товаров
+   ============================== */
+.catalogue {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px); /* Высота с учетом отступов */
+}
+
+.card {
+    margin: 10px;
+    flex: 1 1 calc(33.333% - 20px); /* Три карточки в ряд */
+}
+
+.pagination {
+    margin-top: 20px;
+}
+
+.page-item.active .page-link {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.page-link {
+    color: #28a745;
+}

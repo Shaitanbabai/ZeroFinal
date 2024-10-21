@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'bootstrap4',
 # Добавьте необходимые social providers, если используются
 # 'allauth.socialaccount.providers.google',
 # 'allauth.socialaccount.providers.facebook',
@@ -208,7 +209,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-STATIC_DIRS = [
+STATICFILES_DIRS = [
     BASE_DIR/'static',
 ]
 

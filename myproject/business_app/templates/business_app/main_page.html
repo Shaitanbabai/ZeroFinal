@@ -1,10 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Главная страница</title>
-</head>
-<body>
-    <h1>Главная страница</h1>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+<div class="main-page">
+
+    <!-- ==== Навигационное меню ==== -->
+    <header class="header d-flex align-items-center justify-content-between">
+        <!-- Логотип и название сайта -->
+        <div class="logo">
+            <img src="{% static 'myproject/business_app/static/business_app/images/logo_green.png' %}" alt="Logo">
+            <div class="site-title">FlowerLover</div>
+        </div>
+
+        <!-- Кнопка входа -->
+        <nav class="navigation">
+            <a href="{% url 'authorization' %}" class="nav-button">LogIn</a>
+        </nav>
+    </header>
+
+    <!-- ==== Каталог товаров ==== -->
+    <section class="catalogue mt-4 mb-5 d-flex flex-wrap">
+        {% for product in products %}
+        <!-- Карточка товара -->
+        <article class="card m-2" style="width: 18rem;">
+            <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}">
+            <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text">{{ product.description }}</p>
+                <a href="{% url 'product_detail' product.id %}" class="btn btn-primary">Подробнее</a>
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+
+    <!-- ==== Пагинация ==== -->
+    <nav aria-label="Page navigation" class="pagination-nav">
+        <ul class="pagination justify-content-center">
+            <!-- Кнопка "Предыдущая страница" -->
+            {% if products.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ products.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Номера страниц -->
+            {% for page_num in products.paginator.page_range %}
+            <li class="page-item {% if products.number == page_num %} active {% endif %}">
+                <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+            </li>
+            {% endfor %}
+
+            <!-- Кнопка "Следующая страница" -->
+            {% if products.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ products.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+</nav>
+    
+</div>
+{% endblock %}
