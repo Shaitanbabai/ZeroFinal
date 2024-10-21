@@ -8,12 +8,25 @@ from django.urls import reverse
 from .forms import RegistrationForm, LoginForm
 import logging
 
-
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
+def get_user_group_context(user):
+    """
+    Возвращает словарь с информацией о принадлежности пользователя к группам.
+    """
+    group_names = user.groups.values_list('name', flat=True)
+    context = {
+        'is_customer': 'customer' in group_names,
+        'is_salesman': 'salesman' in group_names
+    }
+    return context
+
 def main_page(request):
-    return render(request, 'business_app/main_page.html')
+    context = {}
+    if request.user.is_authenticated:
+        context.update(get_user_group_context(request.user))
+    return render(request, 'business_app/main_page.html', context)
 
 class AuthorizationView(View):
     def get(self, request):
@@ -33,28 +46,24 @@ class AuthorizationView(View):
 
 @login_required
 def purchase(request):
-    group_names = request.user.groups.values_list('name', flat=True)
-    if 'customer' in group_names:
-        context = {'is_customer': True}
+    context = get_user_group_context(request.user)
+    if context['is_customer']:
         return render(request, 'business_app/purchase.html', context)
-    elif 'salesman' in group_names:
-        return redirect(reverse('sale'))
     else:
         return redirect(reverse('main_page'))
 
 @login_required
 def sale(request):
-    group_names = request.user.groups.values_list('name', flat=True)
-    if 'salesman' in group_names:
-        context = {'is_salesman': True}
+    context = get_user_group_context(request.user)
+    if context['is_salesman']:
         return render(request, 'business_app/sale.html', context)
-    elif 'customer' in group_names:
-        return redirect(reverse('purchase'))
     else:
         return redirect(reverse('main_page'))
 
+
 @login_required
 def profile(request):
+    context = get_user_group_context(request.user)
     return render(request, 'business_app/profile.html')
 
 class RegistrationView(View):

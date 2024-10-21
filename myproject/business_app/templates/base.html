@@ -7,16 +7,35 @@
     <title>{% block title %}FlowerLover{% endblock %}</title>
     <!-- Подключаем Bootstrap -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-     <!-- Подключаем пользовательские стили, добавляя версию для предотвращения кэширования -->
+    <!-- Подключаем пользовательские стили -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
     <link href="{% static 'business_app/css/style.css' %}" rel="stylesheet">
 </head>
 <body>
     <div class="content-wrapper">
         <!-- Header -->
-        <div class="header d-flex align-items-center">
+        <header class="header d-flex align-items-center">
             <img src="{% static 'business_app/images/logo_green.png' %}" alt="Logo">
             <div class="site-title">FlowerLover</div>
-        </div>
+
+            <!-- Навигация, в зависимости от состояния аутентификации пользователя -->
+            <nav class="navigation">
+                {% if user.is_authenticated %}
+                    {% if is_customer %}
+                        <a href="{% url 'purchase' %}" class="nav-button">Мои покупки</a>
+                    {% elif is_salesman %}
+                        <a href="{% url 'sale' %}" class="nav-button">Мои продажи</a>
+                    {% endif %}
+                    <a href="{% url 'profile' %}" class="nav-button">Профиль</a>
+                    <a href="{% url 'logout' %}" class="nav-button">Выход</a>
+                {% else %}
+                    <a href="{% url 'authorization' %}" class="nav-button">Вход</a>
+                {% endif %}
+            </nav>
+
+        </header>
+
+
 
         <!-- Main Content -->
         <div class="container mt-4 mb-5">

@@ -16,20 +16,34 @@ html, body {
    Стили для шапки
    ============================== */
 .header {
-    background-color: #7FFF00; /* Салатовый цвет */
-    padding: 10px 0;
+    background-color: #B7FF7A; /* Салатовый цвет */
+    padding: 5px 0;
     text-align: center;
 }
 
+.header {
+    display: flex;
+    justify-content: space-between; /* Размещает элементы в контейнере по краям */
+    align-items: center;            /* Центрирует элементы по вертикали */
+    width: 100%;
+    padding: 10px 20px;            /* Отступы для визуального отступа */
+    box-sizing: border-box;        /* Учитывает padding в общей ширине */
+}
+
+.header-left {
+    display: flex;
+    align-items: center; /* Центрирует элементы внутри контейнера по вертикали */
+}
+
 .header img {
-    height: 50px;
-    margin: 10px;
+    height: 70px;
+    margin: 5px;
 }
 
 .site-title {
-    font-family: 'Cursive', sans-serif;
-    font-weight: bold;
-    font-size: 18px;
+    font-family: 'Dancing Script', cursive;
+    font-weight: 700; /* Установим значение в 700, так как 1500 не поддерживается */
+    font-size: 48px;
     margin-left: 10px;
 }
 
@@ -71,6 +85,7 @@ html, body {
 .navigation {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 10px;
 }
 
