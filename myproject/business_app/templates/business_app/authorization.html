@@ -1,10 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Страница авторизации</title>
-</head>
-<body>
-<h1>Страница авторизации</h1>
-</body>
-</html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h2>Форма авторизации</h2>
+<!--        <div>-->
+<!--            <pre>{{ form }}</pre> &lt;!&ndash; Вывод всей формы &ndash;&gt;-->
+<!--            <pre>{{ form.errors }}</pre> &lt;!&ndash; Вывод ошибок формы &ndash;&gt;-->
+<!--        </div>-->
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_username">Email:</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="error">
+                        {{ form.username.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_password">Пароль:</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="error">
+                        {{ form.password.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+                    <button type="submit" class="btn btn-primary">Войти</button>
+            <p>Нет аккаунта? <a href="{% url 'registration' %}">Зарегистрироваться</a></p>
+        </form>
+</div>
+{% endblock %}

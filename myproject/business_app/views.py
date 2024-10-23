@@ -8,6 +8,7 @@ from django.urls import reverse
 from .forms import RegistrationForm, LoginForm
 import logging
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ def logout_view(request):
 def redirect_user_based_on_group(user):
     """Redirect user based on their group."""
     if user.groups.filter(name='customer').exists():
-        return redirect(reverse('purchase'))
+        return redirect(reverse('main_page'))
     elif user.groups.filter(name='salesman').exists():
         return redirect(reverse('sale'))
     else:

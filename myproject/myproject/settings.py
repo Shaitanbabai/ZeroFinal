@@ -110,9 +110,8 @@ DATABASES = {
 }
 
 
-# Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
+# Password validation
 class MinimumNumberValidator:
     def __init__(self, min_numbers=1):
         self.min_numbers = min_numbers
