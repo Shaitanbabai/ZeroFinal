@@ -1,19 +1,22 @@
-from allauth.account.views import email
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout, get_permission_codename, authenticate, get_backends
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import Group
-from django.contrib.auth.decorators import login_required, permission_required
-from django.views import View
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import update_session_auth_hash, logout
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib import messages
 import logging
+
+from django.contrib import messages
+from django.contrib.auth import (
+    authenticate, get_backends, get_permission_codename, login, logout, update_session_auth_hash
+)
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.contrib.auth.models import Group
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.views import View
+
+from allauth.account.views import email
+
 from .models import Product
 from .forms import CustomSignupForm, CustomLoginForm
 from .forms import UpdateProfileForm
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)

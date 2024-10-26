@@ -36,11 +36,11 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'allauth',
     'allauth.account',
+    # Добавьте необходимые social providers, если используются
     # 'allauth.socialaccount',
+    # 'allauth.socialaccount.providers.google',
+    # 'allauth.socialaccount.providers.facebook',
     'bootstrap4',
-# Добавьте необходимые social providers, если используются
-# 'allauth.socialaccount.providers.google',
-# 'allauth.socialaccount.providers.facebook',
     'business_app',
 ]
 
@@ -48,7 +48,7 @@ SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
            'allauth.account.auth_backends.AuthenticationBackend',
-           'django.contrib.auth.backends.ModelBackend',
+           # 'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Конфигурации allauth
