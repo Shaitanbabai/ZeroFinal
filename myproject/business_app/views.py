@@ -6,9 +6,14 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views import View
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import update_session_auth_hash, logout
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib import messages
 import logging
 from .models import Product
 from .forms import CustomSignupForm, CustomLoginForm
+from .forms import UpdateProfileForm
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -97,6 +102,31 @@ def update_product(request):
 def profile(request):
     context = get_user_group_context(request.user)
     return render(request, 'business_app/profile.html')
+
+
+@login_required
+def update_profile(request):
+    if request.method == 'POST':
+        profile_form = UpdateProfileForm(request.POST, instance=request.user)
+        password_form = PasswordChangeForm(user=request.user, data=request.POST)
+
+        if profile_form.is_valid() and password_form.is_valid():
+            profile_form.save()
+            user = password_form.save()
+            update_session_auth_hash(request, user)  # Обновляем сессию аутентификации
+
+            messages.success(request, 'Ваш профиль был успешно обновлён!')
+            logout(request)  # Логаут пользователя
+            return redirect('authorization')  # Переадресация на страницу авторизации
+    else:
+        profile_form = UpdateProfileForm(instance=request.user)
+        password_form = PasswordChangeForm(user=request.user)
+
+    return render(request, 'update_profile.html', {
+        'profile_form': profile_form,
+        'password_form': password_form
+    })
+
 
 def logout_view(request):
     logger.info(f"User {request.user.username} logged out.")

@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
+from django.contrib.auth.forms import UserChangeForm
+
 
 # Получаем модель пользователя, которая используется в проекте
 User = get_user_model()
@@ -73,3 +75,11 @@ class CustomLoginForm(AllauthLoginForm):
     def confirm_email_allowed(self, user):
         if not user.is_active:
             raise ValidationError("Этот аккаунт неактивен.")
+
+
+class UpdateProfileForm(UserChangeForm):
+    password = None  # Убираем поле пароля из формы, т.к. оно будет отдельно
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name']

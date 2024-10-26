@@ -1,10 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Профиль авторизованного пользователя</title>
-</head>
-<body>
-<h1>Профиль авторизованного пользователя</h1>
-</body>
-</html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+    <h1>Профиль пользователя</h1>
+    <p>Имя: {{ user.first_name }}</p>
+    <p>Фамилия: {{ user.last_name }}</p>
+    <p>Email: {{ user.email }}</p>
+
+    <a href="{% url 'update_profile' %}">Редактировать профиль</a>
+
+{% endblock %}
