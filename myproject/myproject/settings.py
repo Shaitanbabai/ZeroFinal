@@ -48,7 +48,7 @@ SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
            'allauth.account.auth_backends.AuthenticationBackend',
-           # 'django.contrib.auth.backends.ModelBackend',
+           'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Конфигурации allauth
