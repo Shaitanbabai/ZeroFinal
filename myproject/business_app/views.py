@@ -1,5 +1,6 @@
+from allauth.account.views import email
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout, get_permission_codename, authenticate
+from django.contrib.auth import login, logout, get_permission_codename, authenticate, get_backends
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required, permission_required
@@ -8,6 +9,7 @@ from django.urls import reverse
 import logging
 from .models import Product
 from .forms import CustomSignupForm, CustomLoginForm
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -38,10 +40,15 @@ class AuthorizationView(View):
         form = CustomLoginForm(data=request.POST, request=request)
         if form.is_valid():
             user = form.get_user()
-            if user:
-                login(request, user)
-                logger.info(f"User {user.username} logged in.")
+            if user is not None:
+                backend = get_backends()[0]  # Берем первый доступный бэкенд
+                user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
+                email(request, user)
+                logger.info(f"User {user.email} logged in.")
                 return redirect_user_based_on_group(user)
+            else:
+                logger.warning("Authentication failed: user not found.")
+                form.add_error(None, "Invalid credentials.")
         context = {'form': form, 'errors': form.errors}
         return render(request, 'business_app/authorization.html', context)
 
@@ -54,12 +61,14 @@ class RegistrationView(View):
     def post(self, request):
         form = CustomSignupForm(request.POST)
         if form.is_valid():
-            user = form.save(request)  # Передача request в метод save
+            user = form.save(request)
             customer_group = Group.objects.get(name='customer')
             user.groups.add(customer_group)
-            login(request, user)
-            logger.info(f"New user {user.username} registered and logged in.")
-            return redirect(reverse('main_page'))
+            backend = get_backends()[0]  # Берем первый доступный бэкенд
+            user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
+            email(request, user)
+            logger.info(f"New user {user.email} registered and logged in.")
+            return redirect(reverse('purchase'))
         else:
             return render(request, 'business_app/registration.html', {'form': form, 'errors': form.errors})
 
