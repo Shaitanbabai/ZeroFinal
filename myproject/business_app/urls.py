@@ -12,5 +12,7 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('registration/', views.RegistrationView.as_view(), name='registration'),
     path('logout/', views.logout_view, name='logout'),
+    path('404/', views.custom_404, name='custom_404'),
+    path("update_product/", views.update_product, name="update_product"),
     # Добавьте другие URL-маршруты, необходимые для вашего приложения
 ]

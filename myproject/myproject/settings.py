@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from django.core.exceptions import ValidationError
 import re
+import allauth
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,7 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'allauth',
     'allauth.account',
-    'allauth.socialaccount',
+    # 'allauth.socialaccount',
     'bootstrap4',
 # Добавьте необходимые social providers, если используются
 # 'allauth.socialaccount.providers.google',
@@ -45,24 +46,64 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
-       'django.contrib.auth.backends.ModelBackend',
-       'allauth.account.auth_backends.AuthenticationBackend',
+           'allauth.account.auth_backends.AuthenticationBackend',
+           # 'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Конфигурации allauth
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_PASSWORD_MIN_LENGTH = 10
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
 ACCOUNT_RATE_LIMITS = {
     'login_failed': '5/60s'  # 5 неудачных попыток за 60 секунд
 }
-LOGIN_REDIRECT_URL = '/custom-redirect/'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/'  # URL, на который перенаправляется пользователь после выхода
+
+# Укажите кастомные формы
+ACCOUNT_FORMS = {
+    'signup': 'business_app.forms.CustomSignupForm',
+    'login': 'business_app.forms.CustomLoginForm',
+}
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'  # URL, на который перенаправляется пользователь после выхода
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+"""Настройки для отправки электронных писем в Django с использованием django-allauth.
+
+Эти настройки позволяют отправлять письма на реальные электронные адреса, для функционала подтверждения email, 
+восстановления пароля и других операций в django-allauth.
+
+Шаги по настройке:
+1. Выбрать подходящий бэкенд для отправки писем.
+2. Настроить параметры SMTP-сервера.
+3. Убедиться, что настройки безопасности учтены.
+4. Проверить и протестировать отправку писем.
+
+
+# Выбрать подходящий бэкенд для отправки писем.
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# Настроить параметры SMTP-сервера.
+# EMAIL_HOST = 'smtp.example.com'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = 'your-email@example.com'
+# EMAIL_HOST_PASSWORD = 'your-email-password'
+# EMAIL_USE_TLS = True
+
+# Настройки для отправки электронных писем в Django с использованием django-allauth.
+Убедиться, что настройки безопасности учтены.
+Если вы используете сервисы вроде Gmail, убедитесь, что включена поддержка безопасных приложений 
+или используйте специальные пароли для приложений.
+
+Проверить и протестировать отправку писем.
+Убедитесь, что письма отправляются корректно, протестировав функционал через интерфейс django-allauth
+# (например, регистрация пользователя и подтверждение email).
+"""
 
 # Для разработки, меняйте на SMTP в продакшене
 DEFAULT_FROM_EMAIL = 'webmaster@localhost'
@@ -96,6 +137,19 @@ TEMPLATES = [
     },
 ]
 
+# Дополнительные настройки, если используете социальную аутентификацию
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         'SCOPE': [
+#             'profile',
+#             'email',
+#         ],
+#         'AUTH_PARAMS': {
+#             'access_type': 'online',
+#         },
+#     }
+# }
+
 WSGI_APPLICATION = 'myproject.wsgi.application'
 
 
@@ -110,8 +164,9 @@ DATABASES = {
 }
 
 
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 # Password validation
+# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
+
 class MinimumNumberValidator:
     def __init__(self, min_numbers=1):
         self.min_numbers = min_numbers
@@ -208,16 +263,17 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# STATICFILES_DIRS указывает на дополнительные директории, где искать статические файлы.
 STATICFILES_DIRS = [
-    BASE_DIR/'static',
+    os.path.join(BASE_DIR, 'business_app', 'static'),  # Путь к статическим файлам приложения
 ]
 
+# STATIC_ROOT — это директория, куда будут собираться все статические файлы после выполнения команды collectstatic.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-
+# Настройки для медиа-файлов
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
