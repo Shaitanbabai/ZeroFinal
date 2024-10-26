@@ -54,6 +54,8 @@ class CustomLoginForm(AllauthLoginForm):
     def clean(self):
         email = self.cleaned_data.get('email')
         password = self.cleaned_data.get('password')
+        self.user_cache = None  # Обнуление кеша пользователя перед проверкой
+
         if email and password:
             print(f"Attempting authentication for: {email}")
             self.user_cache = authenticate(self.request, username=email, password=password)
@@ -68,7 +70,6 @@ class CustomLoginForm(AllauthLoginForm):
     def get_user(self):
         return self.user_cache
 
-    @staticmethod
-    def confirm_email_allowed(user):
+    def confirm_email_allowed(self, user):
         if not user.is_active:
             raise ValidationError("Этот аккаунт неактивен.")
