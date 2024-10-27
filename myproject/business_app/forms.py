@@ -1,3 +1,4 @@
+import logging
 from django import forms
 from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
@@ -5,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserChangeForm
 
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 # Получаем модель пользователя, которая используется в проекте
 User = get_user_model()
@@ -53,24 +56,35 @@ class CustomLoginForm(AllauthLoginForm):
             raise ValidationError("Пользователь с данным email не найден.")
         return email
 
-    def clean(self):
+    def clean(self, *args, **kwargs):
         email = self.cleaned_data.get('email')
         password = self.cleaned_data.get('password')
-        self.user_cache = None  # Обнуление кеша пользователя перед проверкой
+        self.user_cache = None
 
         if email and password:
-            print(f"Attempting authentication for: {email}")
+            logger.debug(f"Attempting authentication for: {email}")
+            # Проверьте, что self.request инициализирован корректно
+            if self.request is None:
+                logger.error("Request object is None in CustomLoginForm.clean()")
+                raise ValueError("Request object is required")
+
             self.user_cache = authenticate(self.request, username=email, password=password)
             if self.user_cache is None:
-                print("Authentication failed: Invalid email or password.")
+                logger.warning("Authentication failed: Invalid email or password.")
                 self.add_error('password', "Неправильный email или пароль.")
             else:
-                print(f"Authentication successful for: {email}")
+                logger.info(f"Authentication successful for: {email}")
                 self.confirm_email_allowed(self.user_cache)
-        return self.cleaned_data
+        else:
+            logger.warning("Email or password not provided.")
+
+        return super().clean(*args, **kwargs)
 
     def get_user(self):
         return self.user_cache
+
+    def login(self, *args, **kwargs):
+        return super(CustomLoginForm, self).login(*args, **kwargs)
 
     def confirm_email_allowed(self, user):
         if not user.is_active:

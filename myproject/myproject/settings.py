@@ -47,8 +47,8 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
-           'allauth.account.auth_backends.AuthenticationBackend',
-           # 'django.contrib.auth.backends.ModelBackend',
+            'django.contrib.auth.backends.ModelBackend',
+            'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Конфигурации allauth
@@ -118,6 +118,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'business_app.middleware.CustomLoginRequiredMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'

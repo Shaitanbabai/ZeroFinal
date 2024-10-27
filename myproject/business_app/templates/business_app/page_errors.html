@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+    <h1>{{ error_message }}</h1>
+        <p> Вероятно вы ввели неверный адрес или у Вас нет прав доступа к этой странице. </p>
+        <p> Пожалуйста, обратитесь к администратору, авторизуйтесь или вернитесь на главную страницу.</p>
+<!--    <p>Вы можете вернуться на <a href="{% url 'main_page' %}">главную страницу</a> или <a href="{% url 'authorization' %}">авторизоваться</a>.</p>-->
+
+    <!-- Применяем класс nav-button для стилизации кнопок -->
+    <button class="nav-button" onclick="window.location.href='{% url 'main_page' %}'">Главная страница</button>
+    <button class="nav-button" onclick="window.location.href='{% url 'authorization' %}'">Авторизация</button>
+
+{% endblock %}
