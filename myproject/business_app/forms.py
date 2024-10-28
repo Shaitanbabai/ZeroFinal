@@ -2,8 +2,9 @@ from django import forms
 from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
-from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserChangeForm
+import logging
+logger = logging.getLogger(__name__)
 
 
 # Получаем модель пользователя, которая используется в проекте
@@ -40,41 +41,24 @@ class CustomSignupForm(SignupForm):
         return user
 
 
+
+
+logger = logging.getLogger(__name__)
+
+
 class CustomLoginForm(AllauthLoginForm):
-    def __init__(self, *args, **kwargs):
-        self.request = kwargs.pop('request', None)
-        super().__init__(*args, **kwargs)
-        self.user_cache = None
-
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        # Проверка на существование пользователя с данным email
-        if not User.objects.filter(email=email).exists():
-            raise ValidationError("Пользователь с данным email не найден.")
-        return email
-
     def clean(self):
-        email = self.cleaned_data.get('email')
-        password = self.cleaned_data.get('password')
-        self.user_cache = None  # Обнуление кеша пользователя перед проверкой
+        # Вызовем базовый clean() для стандартной валидации
+        super().clean()
 
-        if email and password:
-            print(f"Attempting authentication for: {email}")
-            self.user_cache = authenticate(self.request, username=email, password=password)
-            if self.user_cache is None:
-                print("Authentication failed: Invalid email or password.")
-                self.add_error('password', "Неправильный email или пароль.")
-            else:
-                print(f"Authentication successful for: {email}")
-                self.confirm_email_allowed(self.user_cache)
+        # Дополнительная проверка: наличие полей login и password
+        if not self.cleaned_data.get("login") or not self.cleaned_data.get("password"):
+            raise ValidationError("Пожалуйста, заполните оба поля.")
+
+        # Логирование успешной валидации
+        logger.info(f"Authentication attempt for user: {self.cleaned_data.get('login')}")
+
         return self.cleaned_data
-
-    def get_user(self):
-        return self.user_cache
-
-    def confirm_email_allowed(self, user):
-        if not user.is_active:
-            raise ValidationError("Этот аккаунт неактивен.")
 
 
 class UpdateProfileForm(UserChangeForm):
