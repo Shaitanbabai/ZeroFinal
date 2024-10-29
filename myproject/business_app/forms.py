@@ -1,3 +1,4 @@
+import logging
 from django import forms
 from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
@@ -6,6 +7,8 @@ from django.contrib.auth.forms import UserChangeForm
 import logging
 logger = logging.getLogger(__name__)
 
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 # Получаем модель пользователя, которая используется в проекте
 User = get_user_model()
@@ -43,23 +46,19 @@ class CustomSignupForm(SignupForm):
 
 
 
-logger = logging.getLogger(__name__)
-
-
 class CustomLoginForm(AllauthLoginForm):
     def clean(self):
         # Вызовем базовый clean() для стандартной валидации
         super().clean()
-
+        
         # Дополнительная проверка: наличие полей login и password
         if not self.cleaned_data.get("login") or not self.cleaned_data.get("password"):
             raise ValidationError("Пожалуйста, заполните оба поля.")
-
+        
         # Логирование успешной валидации
         logger.info(f"Authentication attempt for user: {self.cleaned_data.get('login')}")
 
         return self.cleaned_data
-
 
 class UpdateProfileForm(UserChangeForm):
     password = None  # Убираем поле пароля из формы, т.к. оно будет отдельно
