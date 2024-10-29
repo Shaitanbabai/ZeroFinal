@@ -3,9 +3,8 @@ from django import forms
 from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserChangeForm
-import logging
-logger = logging.getLogger(__name__)
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -44,21 +43,53 @@ class CustomSignupForm(SignupForm):
         return user
 
 
-
-
 class CustomLoginForm(AllauthLoginForm):
-    def clean(self):
-        # Вызовем базовый clean() для стандартной валидации
-        super().clean()
-        
-        # Дополнительная проверка: наличие полей login и password
-        if not self.cleaned_data.get("login") or not self.cleaned_data.get("password"):
-            raise ValidationError("Пожалуйста, заполните оба поля.")
-        
-        # Логирование успешной валидации
-        logger.info(f"Authentication attempt for user: {self.cleaned_data.get('login')}")
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+        self.user_cache = None
 
-        return self.cleaned_data
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        # Проверка на существование пользователя с данным email
+        if not User.objects.filter(email=email).exists():
+            raise ValidationError("Пользователь с данным email не найден.")
+        return email
+
+    def clean(self, *args, **kwargs):
+        email = self.cleaned_data.get('email')
+        password = self.cleaned_data.get('password')
+        self.user_cache = None
+
+        if email and password:
+            logger.debug(f"Attempting authentication for: {email}")
+            # Проверьте, что self.request инициализирован корректно
+            if self.request is None:
+                logger.error("Request object is None in CustomLoginForm.clean()")
+                raise ValueError("Request object is required")
+
+            self.user_cache = authenticate(self.request, username=email, password=password)
+            if self.user_cache is None:
+                logger.warning("Authentication failed: Invalid email or password.")
+                self.add_error('password', "Неправильный email или пароль.")
+            else:
+                logger.info(f"Authentication successful for: {email}")
+                self.confirm_email_allowed(self.user_cache)
+        else:
+            logger.warning("Email or password not provided.")
+
+        return super().clean(*args, **kwargs)
+
+    def get_user(self):
+        return self.user_cache
+
+    def login(self, *args, **kwargs):
+        return super(CustomLoginForm, self).login(*args, **kwargs)
+
+    def confirm_email_allowed(self, user):
+        if not user.is_active:
+            raise ValidationError("Этот аккаунт неактивен.")
+
 
 class UpdateProfileForm(UserChangeForm):
     password = None  # Убираем поле пароля из формы, т.к. оно будет отдельно
