@@ -47,8 +47,10 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
-            'django.contrib.auth.backends.ModelBackend',
-            'allauth.account.auth_backends.AuthenticationBackend',
+
+           'django.contrib.auth.backends.ModelBackend',
+           'allauth.account.auth_backends.AuthenticationBackend',
+
 ]
 
 # Конфигурации allauth
@@ -69,8 +71,9 @@ ACCOUNT_FORMS = {
     'login': 'business_app.forms.CustomLoginForm',
 }
 
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'  # URL, на который перенаправляется пользователь после выхода
+# Переадресации
+LOGIN_REDIRECT_URL = 'main_page'  # Обновите в зависимости от вашей главной страницы
+LOGOUT_REDIRECT_URL = 'login'  # URL, на который перенаправляется пользователь после выхода
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -118,7 +121,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
-    'business_app.middleware.CustomLoginRequiredMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'
@@ -126,7 +128,7 @@ ROOT_URLCONF = 'myproject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'business_app', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

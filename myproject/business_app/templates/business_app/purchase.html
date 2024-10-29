@@ -3,6 +3,16 @@
 
 {% block content %}
 
-
+    {% if message %}
+        <div class="alert alert-info" role="alert">
+            {{ message }}
+        </div>
+        {% if not user.is_authenticated %}
+            <a href="{% url 'authorization' %}" class="btn btn-primary">Перейти к авторизации</a>
+        {% endif %}
+    {% else %}
+        <h2>Ваши покупки</h2>
+        <!-- Тут добавим покупки -->
+    {% endif %}
 
 {% endblock %}
