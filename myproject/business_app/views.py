@@ -44,41 +44,52 @@ def main_page(request):
         context.update(get_user_group_context(request.user))
     return render(request, 'business_app/main_page.html', context)
 
-class AuthorizationView(View):
-    def get(self, request, *args, **kwargs):
-        form = CustomLoginForm(request=request)
-        return render(request, 'business_app/authorization.html', {'form': form})
 
-    def post(self, request, *args, **kwargs):
-        form = CustomLoginForm(data=request.POST, request=request)
+class AuthorizationView(View):
+    def get(self, request):
+        form = CustomLoginForm()
+        return render(request, 'account/login.html', {'form': form})
+
+    def post(self, request):
+        form = CustomLoginForm(data=request.POST)
         if form.is_valid():
-            user = form.get_user()
+            # Получаем email и пароль
+            email = form.cleaned_data.get('email')  # Используем 'email'
+            password = form.cleaned_data.get('password')
+
+            # Аутентификация пользователя по email и паролю
+            user = authenticate(request, email=email, password=password)
+
             if user is not None:
-                backend = get_backends()[0]
-                login(request, user, backend=f'{backend.__module__}.{backend.__class__.__name__}')
+                login(request, user)
                 logger.info(f"User {user.email} logged in.")
                 return redirect_user_based_on_group(user)
             else:
                 logger.warning("Authentication failed: user not found.")
                 form.add_error(None, "Invalid credentials.")
-        context = {'form': form, 'errors': form.errors}
-        return render(request, 'business_app/authorization.html', context)
+
+        return render(request, 'account/login.html', {'form': form})
 
 
 class RegistrationView(View):
     def get(self, request):
         form = CustomSignupForm()
-        return render(request, 'business_app/registration.html', {'form': form})
+        return render(request, 'account/signup.html', {'form': form})
 
     def post(self, request):
         form = CustomSignupForm(request.POST)
         if form.is_valid():
             user = form.save(request)
+            customer_group = Group.objects.get(name='customer')
+            user.groups.add(customer_group)
+            backend = get_backends()[0]  # Берем первый доступный бэкенд
+            user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
+            email(request, user)
+            logger.info(f"New user {user.email} registered and logged in.")
             login(request, user)
-            logger.info(f"User {user.email} registered and logged in.")
-            return redirect_user_based_on_group(user)
-        context = {'form': form, 'errors': form.errors}
-        return render(request, 'business_app/registration.html', context)
+            return redirect(reverse('purchase'))
+        else:
+            return render(request, 'account/signup.html', {'form': form, 'errors': form.errors})
 
 def get_permission_for_action(action, model):
     """
@@ -114,7 +125,7 @@ def update_profile(request):
         profile_form = UpdateProfileForm(instance=request.user)
         password_form = PasswordChangeForm(user=request.user)
 
-    return render(request, 'update_profile.html', {
+    return render(request, 'business_app/update_profile.html', {
         'profile_form': profile_form,
         'password_form': password_form
     })
@@ -125,11 +136,30 @@ def logout_view(request):
     logout(request)
     return redirect(reverse('main_page'))
 
-@login_required(login_url='page_errors')
-@permission_required('business_app.customer', login_url='page_errors', raise_exception=True)
 def purchase(request):
+    # Проверка: авторизован ли пользователь
+    if request.user.is_authenticated:
+        # Проверка прав доступа: принадлежит ли пользователь к группе "customer"
+        if request.user.groups.filter(name='customer').exists():
+            # Если авторизован и имеет нужные права, отобразить страницу покупок
+            return render(request, 'business_app/purchase.html')
+        else:
+            # Сообщение, если пользователь не имеет прав "customer"
+            message = "У вас нет прав для просмотра этой страницы."
+    else:
+        # Сообщение для неавторизованных пользователей
+        message = "Чтобы посмотреть покупки, пожалуйста, авторизуйтесь."
+
+    # Если пользователь не авторизован или не имеет прав, показываем сообщение
+    return render(request, 'business_app/purchase.html', {'message': message})
+
+# @login_required
+def sale(request):
     context = get_user_group_context(request.user)
-    return render(request, 'business_app/purchase.html', context)
+    if context['is_salesman']:
+        return render(request, 'business_app/sale.html', context)
+    else:
+        return redirect(reverse('main_page'))
 
 
 @login_required(login_url='page_errors')
