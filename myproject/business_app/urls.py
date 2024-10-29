@@ -1,9 +1,7 @@
 from django.urls import path
+# from .views import handle_permission_denied_or_not_found
 from . import views
 
-# Регистрация обработчиков ошибок
-handler403 = 'business_app.views.handle_permission_denied_or_not_found'
-handler404 = 'business_app.views.handle_permission_denied_or_not_found'
 
 urlpatterns = [
     path('', views.main_page, name='main_page'),
@@ -25,6 +23,3 @@ urlpatterns = [
 
     # Добавьте другие URL-маршруты, необходимые для вашего приложения
 ]
-
-
-# path('accounts/', include('allauth.urls'), name='accounts'),

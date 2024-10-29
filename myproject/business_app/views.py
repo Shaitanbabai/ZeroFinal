@@ -20,6 +20,7 @@ from .models import Product
 from .forms import CustomSignupForm, CustomLoginForm
 from .forms import UpdateProfileForm
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 

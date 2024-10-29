@@ -41,11 +41,6 @@ class CustomSignupForm(SignupForm):
         return user
 
 
-
-
-logger = logging.getLogger(__name__)
-
-
 class CustomLoginForm(AllauthLoginForm):
     def clean(self):
         # Вызовем базовый clean() для стандартной валидации
