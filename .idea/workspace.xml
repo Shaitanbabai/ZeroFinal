@@ -23,12 +23,6 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/Shaitanbabai/ZeroFinal.git",
-    "accountId": "d2298bd5-aefc-4c02-8321-39dac58096d3"
-  }
-}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3
 }</component>
@@ -38,17 +32,17 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;promo.django&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "com.codeium.enabled": "true",
+    "git-widget-placeholder": "Merging master",
+    "settings.editor.selected.configurable": "promo.django"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\shrio\PycharmProjects\ZeroFinalNew\myproject\business_app\templates\business_app" />
@@ -97,19 +91,10 @@
       <option name="presentableId" value="Default" />
       <updated>1729331553992</updated>
     </task>
-    <task id="LOCAL-00001" summary="Began Order creation and purchase block&#10;&#10;models.py - добавлены модели Product и Order,&#10;views.py - добавлены метод сreate_order , валидация purchase упрощена и унифицирована с сreate_order&#10;urls.py - добавлены пути для работы с формой заказа order_form и переадресацией на purchase.html&#10;froms.py - добавлен  класс OrderForm&#10;Код шаблонов не создан.&#10;&#10;Требуется доработать модули для заказов с изменяемым количеством единиц и наименований.">
-      <option name="closed" value="true" />
-      <created>1730392076260</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1730392076260</updated>
-    </task>
-    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Began Order crearion and purchse block&#10;&#10;models.py - добавлены модели Product и Order,&#10;views.py - добавлены метод сreate_order , валидация purchase упрощена и унифицирована с сreate_order&#10;urls.py - добавлены пути для работы с формой заказа order_form и переадресацией на purchase.html&#10;froms.py - добавлен  класс OrderForm&#10;Код шаблонов не создан.&#10;&#10;Требуется доработать модули для заказов с изменяемым количеством единиц и наименований." />
+    <MESSAGE value="Update workspace.xml" />
     <MESSAGE value="Began Order creation and purchase block&#10;&#10;models.py - добавлены модели Product и Order,&#10;views.py - добавлены метод сreate_order , валидация purchase упрощена и унифицирована с сreate_order&#10;urls.py - добавлены пути для работы с формой заказа order_form и переадресацией на purchase.html&#10;froms.py - добавлен  класс OrderForm&#10;Код шаблонов не создан.&#10;&#10;Требуется доработать модули для заказов с изменяемым количеством единиц и наименований." />
     <option name="LAST_COMMIT_MESSAGE" value="Began Order creation and purchase block&#10;&#10;models.py - добавлены модели Product и Order,&#10;views.py - добавлены метод сreate_order , валидация purchase упрощена и унифицирована с сreate_order&#10;urls.py - добавлены пути для работы с формой заказа order_form и переадресацией на purchase.html&#10;froms.py - добавлен  класс OrderForm&#10;Код шаблонов не создан.&#10;&#10;Требуется доработать модули для заказов с изменяемым количеством единиц и наименований." />
   </component>
