@@ -3,7 +3,9 @@ from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserChangeForm
+from .models import Order
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,3 +64,9 @@ class UpdateProfileForm(UserChangeForm):
     class Meta:
         model = User
         fields = ['email', 'first_name', 'last_name']
+
+
+class OrderForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ['product', 'phone', 'address', 'comment']

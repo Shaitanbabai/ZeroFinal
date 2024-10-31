@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import (
     authenticate, get_backends, get_permission_codename, login, logout, update_session_auth_hash
 )
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
@@ -16,9 +16,12 @@ from django.views import View
 
 from allauth.account.views import email
 
-from .models import Product
 from .forms import CustomSignupForm, CustomLoginForm
 from .forms import UpdateProfileForm
+
+from .models import Product
+from .forms import OrderForm
+from .models import Order
 
 
 # Настройка логгера
@@ -138,22 +141,48 @@ def logout_view(request):
     logout(request)
     return redirect(reverse('main_page'))
 
-def purchase(request):
-    # Проверка: авторизован ли пользователь
-    if request.user.is_authenticated:
-        # Проверка прав доступа: принадлежит ли пользователь к группе "customer"
-        if request.user.groups.filter(name='customer').exists():
-            # Если авторизован и имеет нужные права, отобразить страницу покупок
-            return render(request, 'business_app/purchase.html')
-        else:
-            # Сообщение, если пользователь не имеет прав "customer"
-            message = "У вас нет прав для просмотра этой страницы."
-    else:
-        # Сообщение для неавторизованных пользователей
-        message = "Чтобы посмотреть покупки, пожалуйста, авторизуйтесь."
 
-    # Если пользователь не авторизован или не имеет прав, показываем сообщение
-    return render(request, 'business_app/purchase.html', {'message': message})
+def is_customer(user):
+    """Проверка, является ли пользователь членом группы 'customer'."""
+    return user.groups.filter(name='customer').exists()
+
+
+@login_required(login_url='page_errors')
+@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+def create_order(request):
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.user = request.user
+            order.status = 'confirmed'  # Пример статуса после подтверждения
+            order.save()
+            form.save_m2m()  # Save many-to-many relationships
+            return redirect('purchase')  # Redirect to the purchase (success) page
+    else:
+        form = OrderForm()
+
+    # Здесь вы можете добавить логику для отображения корзины пользователя
+    # Например, получение текущих товаров в корзине из сессии или базы данных
+
+    return render(request, 'business_app/order_form.html', {'form': form})
+
+
+@login_required(login_url='page_errors')
+@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+def purchase(request):
+    # Получение текущего заказа пользователя и его истории заказов
+    current_order = Order.objects.filter(user=request.user, status='confirmed').first()
+    completed_orders = Order.objects.filter(user=request.user, status='completed')
+    canceled_orders = Order.objects.filter(user=request.user, status='canceled')
+
+    context = {
+        'current_order': current_order,
+        'completed_orders': completed_orders,
+        'canceled_orders': canceled_orders,
+    }
+
+    return render(request, 'business_app/purchase.html', context)
 
 # @login_required
 def sale(request):

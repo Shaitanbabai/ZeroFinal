@@ -12,10 +12,12 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path("update_profile/", views.update_profile, name="update_profile"),
 
+    path('create_order/', views.create_order, name='order_form'),
     path('purchase/', views.purchase, name='purchase'),
+
+
     path('sale/', views.sale, name='sale'),
     # path("product/", views.product, name="product"),
-
     path("update_product/", views.update_product, name="update_product"),
     # path("delete_product/", views.delete_product, name="delete_product"),
 
