@@ -19,18 +19,22 @@ myproject/
 │   │       │   └──logo_green.png       
 │   │       └──js
 │   └─ templates
-│       ├── base.html    
+│       ├── account  
+│       │   ├── login.html
+│       │   └── signup.html
+│       │
 │       └──business_app
-│           ├── authorization.html
-│           ├── main_page.html
-│           ├── page_404.html
-│           ├── password_request.html
-│           ├── password_reset.html
-│           ├── profile.html
-│           ├── purchase.html
-│           ├── registration.html
-│           └── sale.html
-│        
+│       │   ├── main_page.html
+│       │   ├── page_errors.html
+│       │   ├── profile.html
+│       │   ├── profile_update.html
+│       │   ├── password_reset.html
+│       │   ├── sale.html
+│       │   ├── purchase.html
+│       │   ├── product.html
+│       │   └── product_update.html
+│       └── base.html 
+│
 ├── media
 │   └─ myproject
 │       ├── __init__.py   
