@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h2>Список продуктов</h2>
+    <form method="get">
+        <fieldset>
+            <legend>Фильтры</legend>
+            <div class="row mb-3">
+                <div class="col">
+                    <label for="name_contains">Имя содержит</label>
+                    <input type="text" id="name_contains" name="name_contains" class="form-control" placeholder="Имя содержит" value="{{ request.GET.name_contains }}" aria-describedby="nameHelp">
+                </div>
+                <div class="col">
+                    <label for="price_min">Мин. цена</label>
+                    <input type="number" step="0.01" id="price_min" name="price_min" class="form-control" placeholder="Мин. цена" value="{{ request.GET.price_min }}" aria-describedby="priceMinHelp">
+                </div>
+                <div class="col">
+                    <label for="price_max">Макс. цена</label>
+                    <input type="number" step="0.01" id="price_max" name="price_max" class="form-control" placeholder="Макс. цена" value="{{ request.GET.price_max }}" aria-describedby="priceMaxHelp">
+                </div>
+
+                <div class="col">
+                    <label for="is_active">Статус</label>
+                    <select id="is_active" name="is_active" class="form-control" aria-describedby="statusHelp">
+                        <option value="">Все</option>
+                        <option value="True" {% if request.GET.is_active == 'True' %}selected{% endif %}>Активен</option>
+                        <option value="False" {% if request.GET.is_active == 'False' %}selected{% endif %}>Не активен</option>
+                    </select>
+                </div>
+
+                <div class="col">
+                    <button type="submit" class="btn btn-primary" aria-label="Применить фильтр">Фильтр</button>
+                    <a href="{% url 'product_list' %}" class="btn btn-secondary" aria-label="Сбросить фильтры">Сбросить</a>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>
+                    <a href="?{% if request.GET.name_contains %}name_contains={{ request.GET.name_contains }}&{% endif %}
+                             {% if request.GET.price_min %}price_min={{ request.GET.price_min }}&{% endif %}
+                             {% if request.GET.price_max %}price_max={{ request.GET.price_max }}&{% endif %}
+                             {% if request.GET.is_active %}is_active={{ request.GET.is_active }}&{% endif %}
+                             sort=name_asc" aria-label="Сортировать по имени по возрастанию">Имя ↑</a> |
+                    <a href="?{% if request.GET.name_contains %}name_contains={{ request.GET.name_contains }}&{% endif %}
+                             {% if request.GET.price_min %}price_min={{ request.GET.price_min }}&{% endif %}
+                             {% if request.GET.price_max %}price_max={{ request.GET.price_max }}&{% endif %}
+                             {% if request.GET.is_active %}is_active={{ request.GET.is_active }}&{% endif %}
+                             sort=name_desc" aria-label="Сортировать по имени по убыванию">↓</a>
+                </th>
+                <th>
+                    <a href="?{% if request.GET.name_contains %}name_contains={{ request.GET.name_contains }}&{% endif %}
+                             {% if request.GET.price_min %}price_min={{ request.GET.price_min }}&{% endif %}
+                             {% if request.GET.price_max %}price_max={{ request.GET.price_max }}&{% endif %}
+                             {% if request.GET.is_active %}is_active={{ request.GET.is_active }}&{% endif %}
+                             sort=price_asc" aria-label="Сортировать по цене по возрастанию">Цена ↑</a> |
+                    <a href="?{% if request.GET.name_contains %}name_contains={{ request.GET.name_contains }}&{% endif %}
+                             {% if request.GET.price_min %}price_min={{ request.GET.price_min }}&{% endif %}
+                             {% if request.GET.price_max %}price_max={{ request.GET.price_max }}&{% endif %}
+                             {% if request.GET.is_active %}is_active={{ request.GET.is_active }}&{% endif %}
+                             sort=price_desc" aria-label="Сортировать по цене по убыванию">↓</a>
+                </th>
+                <th>Изображение</th>
+                <th>Статус</th>
+                <th>Управление</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td>${{ product.price }}</td>
+                    <td><img src="{{ product.image.url }}" alt="{{ product.name }}" style="width: 50px;"></td>
+                    <td>{{ product.is_active|yesno:"Активен,Не активен" }}</td>
+                    <td>
+                        <a href="{% url 'toggle_product_status' product.id %}" class="btn btn-warning">
+                            {% if product.is_active %}
+                                Снять с продажи
+                            {% else %}
+                                Активировать
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'update_product' product.id %}" class="btn btn-info">Редактировать</a>
+                    </td>
+                </tr>
+            {% empty %}
+<tr>
+                    <td colspan="5">Нет доступных продуктов.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Пагинация -->
+    <nav aria-label="Навигация по страницам">
+        <ul class="pagination">
+            {% if products.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="Первая">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.previous_page_number }}" aria-label="Предыдущая">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+            {% for num in products.paginator.page_range %}
+                {% if products.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.next_page_number }}" aria-label="Следующая">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.paginator.num_pages }}" aria-label="Последняя">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+{% endblock %}

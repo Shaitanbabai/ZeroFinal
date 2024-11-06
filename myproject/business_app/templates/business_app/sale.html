@@ -2,7 +2,34 @@
 {% load static %}
 
 {% block content %}
-
-
-
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <!-- Боковое навигационное меню -->
+            <div class="sidebar">
+                {% if is_salesman %}
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link nav-button" href="{% url 'create_product' %}">Создать товар</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-button" href="{% url 'product_list' %}">Список товаров</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-button" href="{% url 'open_orders' %}">Открытые заказы</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-button" href="{% url 'sales_statistics' %}">Статистика продаж</a>
+                        </li>
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-9">
+            <!-- Здесь будет основной контент страницы -->
+            {% block sale_content %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
 {% endblock %}

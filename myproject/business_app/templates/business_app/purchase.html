@@ -11,8 +11,13 @@
             <a href="{% url 'authorization' %}" class="btn btn-primary">Перейти к авторизации</a>
         {% endif %}
     {% else %}
+
         <h2>Ваши покупки</h2>
-        <!-- Тут добавим покупки -->
+        {% for item in order.items.all %}
+            <p>{{ item.quantity }} x {{ item.product.name }} @ {{ item.price }}</p>
+        {% endfor %}
+    <p>Итоговая сумма: {{ order.total_amount }}</p>
+
     {% endif %}
 
 {% endblock %}

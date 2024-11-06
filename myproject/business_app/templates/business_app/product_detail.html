@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ product.name }} - Product Detail
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1>{{ product.name }}</h1>
+        <img src="{{ product.image.url }}" class="img-fluid" alt="{{ product.name }}">
+        <p class="lead">{{ product.description }}</p>
+        <h3>${{ product.price }}</h3>
+    </div>
+    <div class="col-md-4">
+        <div class="list-group">
+            {% if user.is_authenticated %}
+                {% if user.groups.filter(name='customer').exists %}
+                    <a href="{% url 'order_now' product.id %}" class="list-group-item list-group-item-action">Заказать сразу</a>
+                    <a href="{% url 'add_to_cart' product.id %}" class="list-group-item list-group-item-action">Добавить в корзину</a>
+                    <a href="{% url 'view_cart' %}" class="list-group-item list-group-item-action">Заглянуть в корзину</a>
+                {% elif user.groups.filter(name='salesman').exists %}
+                    <a href="{% url 'update_product' product.id %}" class="list-group-item list-group-item-action">Редактировать</a>
+                    <a href="{% url 'toggle_product_status' product.id %}" class="list-group-item list-group-item-action">
+                        {% if product.is_active %}
+                            Деактивировать
+                        {% else %}
+                            Активировать
+                        {% endif %}
+                    </a>
+                    <a href="{% url 'product_list' %}" class="list-group-item list-group-item-action">В каталог</a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login' %}" class="list-group-item list-group-item-action">Авторизуйтесь</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

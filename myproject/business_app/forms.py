@@ -3,14 +3,24 @@ from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserChangeForm
-from .models import Order
+from django.forms import inlineformset_factory
+from .models import Order, OrderItem
+from .models import Product
 import logging
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Получаем модель пользователя, которая используется в проекте
 User = get_user_model()
+
+""" Блок классов для регистрации и авторизации.
+Класс CustomSignupForm используется для регистрации нового пользователя. 
+При регистрации нового пользователя, происходит сохранение данных пользователя в базе данных, 
+создание пользователя в системе, создание группы пользователя.
+
+"""
 
 class CustomSignupForm(SignupForm):
     first_name = forms.CharField(
@@ -43,6 +53,10 @@ class CustomSignupForm(SignupForm):
         return user
 
 
+"""
+Класс CustomLoginForm используется для авторизации пользователя. 
+При авторизации пользователя, происходит проверка логина и пароля.
+"""
 class CustomLoginForm(AllauthLoginForm):
     def clean(self):
         # Вызовем базовый clean() для стандартной валидации
@@ -58,6 +72,10 @@ class CustomLoginForm(AllauthLoginForm):
         return self.cleaned_data
 
 
+"""
+Класс UpdateProfileForm используется для обновления профиля пользователя. 
+При обновлении профиля пользователя, происходит проверка пароля.
+"""
 class UpdateProfileForm(UserChangeForm):
     password = None  # Убираем поле пароля из формы, т.к. оно будет отдельно
 
@@ -66,7 +84,38 @@ class UpdateProfileForm(UserChangeForm):
         fields = ['email', 'first_name', 'last_name']
 
 
+"""
+Класс CreateProductForm используется для создания продукта. 
+Задаются параметры, которые будут использоваться в форме и структура таблицы с продуктами
+"""
+class CreateProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = ['name', 'description', 'price', 'image']
+
+    def __init__(self, *args, **kwargs):
+        try:
+            super(CreateProductForm, self).__init__(*args, **kwargs)
+            for field_name, field in self.fields.items():
+                field.required = True
+                logger.debug(f"Поле '{field_name}' установлено как обязательное.")
+        except Exception as e:
+            logger.error(f"Ошибка при инициализации формы: {e}")
+            raise  # Поднимаем исключение дальше, если нужно
+
+
+"""
+Класс OrderForm используется для создания заказа. 
+Задаются параметры, которые будут использоваться в форме и структура таблицы с заказами
+"""
 class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
-        fields = ['product', 'phone', 'address', 'comment']
+        fields = ['phone', 'address', 'comment']
+
+OrderItemFormSet = inlineformset_factory(
+    Order, OrderItem,
+    fields=['product', 'quantity', 'price'],
+    extra=1,
+    can_delete=True
+)
