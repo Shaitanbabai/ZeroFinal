@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import (
     authenticate, get_backends, get_permission_codename, login, logout, update_session_auth_hash
 )
-from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
@@ -271,11 +271,6 @@ def product_list(request):
     if price_max:
         products = products.filter(price__lte=price_max)
     is_active = request.GET.get('is_active')
-    if is_active:
-        products = products.filter(is_active=(is_active == 'True'))
-
-    # Фильтрация по статусу
-    is_active = request.GET.get('is_active')
     if is_active in ['True', 'False']:
         products = products.filter(is_active=(is_active == 'True'))
 
@@ -294,11 +289,11 @@ def product_list(request):
     elif sort == 'price_desc':
         products = products.order_by('-price')
 
-    return render(request, 'business_app/product_list.html', {'products': products})
+    return render(request, 'business_app/product_list.html', {'products': products, 'request': request})
 
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
+# @login_required(login_url='page_errors')
+# @user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
 def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     return render(request, 'business_app/product_detail.html', {'product': product})

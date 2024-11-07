@@ -18,7 +18,7 @@ urlpatterns = [
     path('sale/', views.sale, name='sale'),  # Маршрут для страницы панели управления продавца
     path('products/', views.product_list, name='product_list'),  # Маршрут для страницы списка продуктов
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),  # Маршрут для детального просмотра продукта
-    path('product/create/', views.create_product, name='create_product'),  # Маршрут для создания продукта
+    path('create/', views.create_product, name='create_product'),  # Маршрут для создания продукта
     path('product/<int:product_id>/update/', views.update_product, name='update_product'),  # Маршрут для обновления продукта
     path('product/<int:product_id>/toggle_status/', views.toggle_product_status, name='toggle_product_status'),  # Маршрут для переключения статуса продукта
 
