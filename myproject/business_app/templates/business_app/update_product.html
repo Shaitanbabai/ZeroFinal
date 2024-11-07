@@ -2,7 +2,55 @@
 {% load static %}
 
 {% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Боковое навигационное меню -->
+        <div class="col-md-3">
+            <div class="list-group">
+                <a href="{% url 'product_detail' product.id %}" class="list-group-item list-group-item-action">Назад к продукту</a>
+                <button type="button" class="list-group-item list-group-item-action" onclick="document.getElementById('product-form').submit();">
+                    Сохранить
+                </button>
+            </div>
+        </div>
 
-
-
+        <!-- Форма редактирования продукта -->
+        <div class="col-md-9">
+            <h2>Редактирование продукта: {{ product.name }}</h2>
+            <form method="post" enctype="multipart/form-data" id="product-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ form.name.label_tag }}
+                    {{ form.name|add_class:"form-control" }}
+                    {% if form.name.errors %}
+                        <div class="text-danger">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.description.label_tag }}
+                    {{ form.description|add_class:"form-control" }}
+                    {% if form.description.errors %}
+                        <div class="text-danger">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.price.label_tag }}
+                    {{ form.price|add_class:"form-control" }}
+                    {% if form.price.errors %}
+                        <div class="text-danger">{{ form.price.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.image.label_tag }}
+                    {{ form.image|add_class:"form-control-file" }}
+                    {% if form.image.errors %}
+                        <div class="text-danger">{{ form.image.errors }}</div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                <a href="{% url 'product_detail' product.id %}" class="btn btn-secondary">Отмена</a>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -5,15 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="08671c6b-3278-40d9-8cb2-83a2702050e3" name="Changes" comment="Update workspace.xml">
-      <change afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/create_product.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/product_list.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/business_app/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/business_app/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/business_app/templates/business_app/product.html" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/product_detail.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/business_app/templates/business_app/purchase.html" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/purchase.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/business_app/templates/business_app/sale.html" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/sale.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/business_app/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/business_app/templates/business_app/product_list.html" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/product_list.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/business_app/templates/business_app/update_product.html" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/update_product.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/business_app/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

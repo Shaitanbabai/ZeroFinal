@@ -25,7 +25,6 @@ from .forms import CreateProductForm
 from .models import Order
 from .forms import OrderForm, OrderItemFormSet
 
-
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -273,6 +272,11 @@ def product_list(request):
         products = products.filter(price__lte=price_max)
     is_active = request.GET.get('is_active')
     if is_active:
+        products = products.filter(is_active=(is_active == 'True'))
+
+    # Фильтрация по статусу
+    is_active = request.GET.get('is_active')
+    if is_active in ['True', 'False']:
         products = products.filter(is_active=(is_active == 'True'))
 
     # Сортировка

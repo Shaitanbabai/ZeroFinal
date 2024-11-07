@@ -7,6 +7,7 @@ class Product(models.Model):
     """
     Модель продукта. Связана с моделью пользователя. Передает параметры карточки продукта.
     """
+    objects = None
     name = models.CharField(max_length=50)
     description = models.TextField(max_length=255)
     price = models.DecimalField(max_digits=8, decimal_places=2)
@@ -29,6 +30,7 @@ class Order(models.Model):
     Связана с моделями пользователя, продукта, комплексного заказа (OrderItem)
     Переделяет параметры заказа, статус заказа и дату создания
     """
+    objects = None
     STATUS_CONFIRMED = 'confirmed'
     STATUS_PAID = 'paid'
     STATUS_DELIVERED = 'delivered'
