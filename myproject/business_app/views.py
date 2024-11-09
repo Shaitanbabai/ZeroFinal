@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
@@ -24,6 +25,7 @@ from .forms import CreateProductForm
 
 from .models import Order
 from .forms import OrderForm, OrderItemFormSet
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -51,14 +53,18 @@ def redirect_user_based_on_group(user):
     else:
         return redirect('main_page')
 
+
 def main_page(request):
-    """    Метод главной страницы.
-    Если пользователь уже авторизован, происходит перенаправление на соответствующую страницу.
-    """
-    context = {}
-    if request.user.is_authenticated:
-        context.update(get_user_group_context(request.user))
-    return render(request, 'business_app/main_page.html', context)
+    # Получаем все продукты из базы данных
+    products_list = Product.objects.all()
+
+    # Настройка пагинации
+    paginator = Paginator(products_list, 10)  # Показываем 10 товаров на странице
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+
+    # Передаем продукты в контекст для шаблона
+    return render(request, 'business_app/main_page.html', {'products': products})
 
 
 class AuthorizationView(View):
@@ -296,7 +302,19 @@ def product_list(request):
 # @user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
 def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    return render(request, 'business_app/product_detail.html', {'product': product})
+
+    # Инициализируем контекст
+    context = {
+        'product': product,
+        'is_customer': False,
+        'is_salesman': False,
+    }
+
+    # Если пользователь авторизован, добавляем информацию о его группе
+    if request.user.is_authenticated:
+        context.update(get_user_group_context(request.user))
+
+    return render(request, 'business_app/product_detail.html', context)
 
 
 @login_required(login_url='page_errors')

@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 import re
 import allauth
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,6 +41,7 @@ INSTALLED_APPS = [
     # 'allauth.socialaccount.providers.google',
     # 'allauth.socialaccount.providers.facebook',
     'bootstrap4',
+    # 'templatetags.form_tags'
     'business_app',
 ]
 

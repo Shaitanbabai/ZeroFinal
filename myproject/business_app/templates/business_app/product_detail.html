@@ -16,11 +16,11 @@
     <div class="col-md-4">
         <div class="list-group">
             {% if user.is_authenticated %}
-                {% if user.groups.filter(name='customer').exists %}
+                {% if is_customer %}
                     <a href="{% url 'order_now' product.id %}" class="list-group-item list-group-item-action">Заказать сразу</a>
                     <a href="{% url 'add_to_cart' product.id %}" class="list-group-item list-group-item-action">Добавить в корзину</a>
                     <a href="{% url 'view_cart' %}" class="list-group-item list-group-item-action">Заглянуть в корзину</a>
-                {% elif user.groups.filter(name='salesman').exists %}
+                {% elif is_salesman %}
                     <a href="{% url 'update_product' product.id %}" class="list-group-item list-group-item-action">Редактировать</a>
                     <a href="{% url 'toggle_product_status' product.id %}" class="list-group-item list-group-item-action">
                         {% if product.is_active %}

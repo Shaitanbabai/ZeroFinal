@@ -31,14 +31,14 @@ class Order(models.Model):
     """
     objects = None
     STATUS_CONFIRMED = 'confirmed'
-    STATUS_PAID = 'paid'
+    # STATUS_PAID = 'paid'
     STATUS_DELIVERED = 'delivered'
     STATUS_CANCELLED = 'cancelled'
     STATUS_COMPLETED = 'completed'
 
     STATUS_CHOICES = [
         (STATUS_CONFIRMED, 'Подтвержден'),
-        (STATUS_PAID, 'Оплачен'),
+        # (STATUS_PAID, 'Оплачен'),
         (STATUS_DELIVERED, 'Передан курьеру'),
         (STATUS_CANCELLED, 'Отменен'),
         (STATUS_COMPLETED, 'Завершен'),

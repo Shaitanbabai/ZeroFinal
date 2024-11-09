@@ -118,7 +118,46 @@ html, body {
 .card {
     margin: 10px;
     flex: 1 1 calc(33.333% - 20px); /* Три карточки в ряд */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Позволяет карточке заполнять весь доступный вертикальный размер */
 }
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.card-title {
+    margin-bottom: 0.5rem;
+}
+
+.card-text {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 1rem;
+}
+
+.card-button {
+    align-self: flex-start;
+    margin-top: auto; /* Сдвигает кнопку вниз */
+    background-color: #28a745 !important; /* Зеленый цвет */
+    color: #f7e7ce !important; /* Шампань */
+    border: none !important;
+    border-radius: 20px !important;
+    padding: 5px 15px !important;
+    text-decoration: none !important;
+    font-size: 16px !important;
+    transition: background-color 0.3s !important;
+}
+
+.card-button:hover {
+    background-color: #218838 !important; /* Темнее при наведении */
+}
+
+
 
 .pagination {
     margin-top: 20px;
