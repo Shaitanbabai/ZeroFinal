@@ -26,26 +26,25 @@ class Product(models.Model):
 class Order(models.Model):
     """
     Модель заказа.
-    Связана с моделями пользователя, продукта, комплексного заказа (OrderItem)
-    Переделяет параметры заказа, статус заказа и дату создания
+    Связана с моделями пользователя, продукта, комплексного заказа (OrderItem).
+    Определяет параметры заказа, статус заказа и дату создания.
     """
+
     objects = None
     STATUS_CONFIRMED = 'confirmed'
-    # STATUS_PAID = 'paid'
     STATUS_DELIVERED = 'delivered'
     STATUS_CANCELLED = 'cancelled'
     STATUS_COMPLETED = 'completed'
 
     STATUS_CHOICES = [
         (STATUS_CONFIRMED, 'Подтвержден'),
-        # (STATUS_PAID, 'Оплачен'),
         (STATUS_DELIVERED, 'Передан курьеру'),
         (STATUS_CANCELLED, 'Отменен'),
         (STATUS_COMPLETED, 'Завершен'),
     ]
 
-    user:User = models.ForeignKey(User, on_delete=models.CASCADE)
-    items = models.ManyToManyField(Product, through='OrderItem')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')  # type: User
+    items = models.ManyToManyField('Product', through='OrderItem', related_name='orders')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     phone = models.CharField(max_length=15)
     address = models.TextField()
@@ -57,14 +56,30 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.pk} by {self.user.username}"
 
+    def update_total_amount(self):
+        """Обновляет общую сумму заказа, суммируя стоимость всех элементов."""
+        self.total_amount = sum(
+            item.quantity * item.product.price  # Убедитесь, что у вас есть доступ к product и его цене
+            for item in OrderItem.objects.filter(order=self)
+        )
+        self.save()
+
+
 class OrderItem(models.Model):
-    """    Модель для связи продукта и заказа.
+    """
+    Модель для связи продукта и заказа.
     В заказе может быть несколько продуктов и несколько единиц продукта в заказе.
-    Связывание происходит через внешние ключи    """
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    Связывание происходит через внешние ключи.
+    """
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')  # type: Order
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='order_items')  # type: Product
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} @ {self.price} each"
+
+    def save(self, *args, **kwargs):
+        """Переопределяем метод save для автоматического обновления общей суммы заказа."""
+        super().save(*args, **kwargs)
+        self.order.update_total_amount()

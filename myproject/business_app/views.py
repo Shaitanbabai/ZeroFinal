@@ -26,7 +26,6 @@ from .forms import CreateProductForm
 from .models import Order
 from .forms import OrderForm, OrderItemFormSet
 
-
 # Настройка логгера
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,21 @@
-{% extends "base.html" %}
-{% load static %}
+ {% extends "base.html" %}
+   {% load static %}
 
-{% block content %}
+   {% block content %}
+   <h2>Форма заказа</h2>
+   <form method="post">
+       {% csrf_token %}
+       {{ form.as_p }}
 
-
-
-{% endblock %}
+       <h3>Ваши товары:</h3>
+       <ul>
+       {% for item in cart_items %}
+           <li>{{ item.product.name }} - {{ item.quantity }} шт.
+               <a href="{% url 'remove_from_cart' item.id %}">Удалить</a>
+           </li>
+       {% endfor %}
+       </ul>
+       <button type="submit">Оформить заказ</button>
+       <a href="{% url 'clear_cart' %}">Сбросить всё</a>
+   </form>
+   {% endblock %}

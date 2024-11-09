@@ -13,13 +13,16 @@
         <p class="lead">{{ product.description }}</p>
         <h3>${{ product.price }}</h3>
     </div>
+
     <div class="col-md-4">
         <div class="list-group">
             {% if user.is_authenticated %}
-                {% if is_customer %}
-                    <a href="{% url 'order_now' product.id %}" class="list-group-item list-group-item-action">Заказать сразу</a>
-                    <a href="{% url 'add_to_cart' product.id %}" class="list-group-item list-group-item-action">Добавить в корзину</a>
-                    <a href="{% url 'view_cart' %}" class="list-group-item list-group-item-action">Заглянуть в корзину</a>
+                 {% if is_customer %}
+                    <form action="{% url 'order_form' %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <button type="submit" class="list-group-item list-group-item-action">Купить</button>
+                    </form>
                 {% elif is_salesman %}
                     <a href="{% url 'update_product' product.id %}" class="list-group-item list-group-item-action">Редактировать</a>
                     <a href="{% url 'toggle_product_status' product.id %}" class="list-group-item list-group-item-action">
