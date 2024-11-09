@@ -30,22 +30,23 @@ class Order(models.Model):
     Определяет параметры заказа, статус заказа и дату создания.
     """
 
+    # objects = None
     objects = None
     STATUS_CONFIRMED = 'confirmed'
     STATUS_DELIVERED = 'delivered'
-    STATUS_CANCELLED = 'cancelled'
+    STATUS_CANCELED = 'cancelled'
     STATUS_COMPLETED = 'completed'
 
     STATUS_CHOICES = [
         (STATUS_CONFIRMED, 'Подтвержден'),
         (STATUS_DELIVERED, 'Передан курьеру'),
-        (STATUS_CANCELLED, 'Отменен'),
+        (STATUS_CANCELED, 'Отменен'),
         (STATUS_COMPLETED, 'Завершен'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')  # type: User
     items = models.ManyToManyField('Product', through='OrderItem', related_name='orders')
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     phone = models.CharField(max_length=15)
     address = models.TextField()
     comment = models.TextField(blank=True, null=True)
@@ -71,10 +72,11 @@ class OrderItem(models.Model):
     В заказе может быть несколько продуктов и несколько единиц продукта в заказе.
     Связывание происходит через внешние ключи.
     """
+    objects = None
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')  # type: Order
     product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='order_items')  # type: Product
     quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} @ {self.price} each"

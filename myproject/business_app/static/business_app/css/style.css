@@ -171,3 +171,20 @@ html, body {
 .page-link {
     color: #28a745;
 }
+
+
+/* ==============================
+   Корзина
+   ============================== */
+
+    .cart-item {
+        margin-bottom: 10px;
+    }
+    .cart-item input {
+        width: 120px;
+    }
+    .cart-summary {
+        font-weight: bold;
+        margin-top: 20px;
+    }
+</style>

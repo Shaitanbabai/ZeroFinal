@@ -1,21 +1,97 @@
- {% extends "base.html" %}
-   {% load static %}
+{% extends "base.html" %}
+{% load static %}
 
-   {% block content %}
-   <h2>Форма заказа</h2>
-   <form method="post">
-       {% csrf_token %}
-       {{ form.as_p }}
+{% block content %}
+<h2>Форма заказа</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
 
-       <h3>Ваши товары:</h3>
-       <ul>
-       {% for item in cart_items %}
-           <li>{{ item.product.name }} - {{ item.quantity }} шт.
-               <a href="{% url 'remove_from_cart' item.id %}">Удалить</a>
-           </li>
-       {% endfor %}
-       </ul>
-       <button type="submit">Оформить заказ</button>
-       <a href="{% url 'clear_cart' %}">Сбросить всё</a>
-   </form>
-   {% endblock %}
+    <h3>Ваши товары:</h3>
+    <ul id="cart-items">
+        {% for item in cart_items %}
+        <li class="cart-item" data-item-id="{{ item.product.id }}">
+            {{ item.product.name }} -
+            <input type="number" class="quantity-input" name="quantity_{{ item.product.id }}" value="{{ item.quantity }}" min="0"> шт.
+            <a href="#" class="remove-item" data-item-id="{{ item.product.id }}">Удалить</a>
+        </li>
+        {% endfor %}
+    </ul>
+    <h3 class="cart-summary">Итог: <span id="total-price">{{ total_price }}</span></h3>
+
+    <button type="submit">Оформить заказ</button>
+    <a href="#" id="clear-cart">Сбросить всё</a>
+</form>
+
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script>
+    $(document).ready(function () {
+        // Удалить элемент из корзины
+        $('.remove-item').click(function (event) {
+            event.preventDefault();
+            var itemId = $(this).data('item-id');
+            var itemElement = $(this).closest('.cart-item');
+
+            $.ajax({
+                url: '{% url "update_cart" %}',
+                method: 'POST',
+                data: {
+                    action: 'remove',
+                    product_id: itemId,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    // Удалить элемент из списка
+                    itemElement.remove();
+                    // Обновить итоговую сумму
+                    $('#total-price').text(response.new_total_price);
+                }
+            });
+        });
+
+        // Очистить корзину
+        $('#clear-cart').click(function (event) {
+            event.preventDefault();
+
+            $.ajax({
+                url: '{% url "update_cart" %}',
+                method: 'POST',
+                data: {
+                    action: 'clear',
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    // Очистить список товаров
+                    $('#cart-items').empty();
+                    // Обновить итоговую сумму
+                    $('#total-price').text('0');
+                }
+            });
+        });
+
+        // Изменить количество товара
+        $('.quantity-input').change(function () {
+            var itemId = $(this).closest('.cart-item').data('item-id');
+            var newQuantity = $(this).val();
+
+            $.ajax({
+                url: '{% url "update_cart" %}',
+                method: 'POST',
+                data: {
+                    action: 'update',
+                    product_id: itemId,
+                    quantity: newQuantity,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    // Обновить итоговую сумму
+                    $('#total-price').text(response.new_total_price);
+                },
+                error: function () {
+                    alert('Ошибка при обновлении количества товара.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

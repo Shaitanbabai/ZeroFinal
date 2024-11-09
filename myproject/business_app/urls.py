@@ -12,12 +12,12 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path("update_profile/", views.update_profile, name="update_profile"),
 
-    path('create_order/', views.create_order, name='order_form'),
-    path('purchase/', views.purchase, name='purchase'),
+    path('order_form/', views.order_form, name='order_form'),  # Форма заказа и корзина
+    path('purchase/', views.purchase, name='purchase'),  # Страница "Мои покупки", интерфейс покупателя
 
-    path('sale/', views.sale, name='sale'),  # Маршрут для страницы панели управления продавца
-    path('products/', views.product_list, name='product_list'),  # Маршрут для страницы списка продуктов
-    path('product/<int:product_id>/', views.product_detail, name='product_detail'),  # Маршрут для детального просмотра продукта
+    path('sale/', views.sale, name='sale'),  # Страница "Мои продажи", интерфейс продавца
+    path('products/', views.product_list, name='product_list'),  # Маршрут к шаблону продукта
+    path('product/<int:product_id>/', views.product_detail, name='product_detail'),  # Маршрут для просмотра выбранного продукта
     path('create/', views.create_product, name='create_product'),  # Маршрут для создания продукта
     path('product/<int:product_id>/update/', views.update_product, name='update_product'),  # Маршрут для обновления продукта
     path('product/<int:product_id>/toggle_status/', views.toggle_product_status, name='toggle_product_status'),  # Маршрут для переключения статуса продукта

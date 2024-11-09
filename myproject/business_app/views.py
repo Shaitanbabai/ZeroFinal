@@ -1,30 +1,39 @@
 
 import logging
+import datetime
 
+# Импорты админки, авторизации и разграничения доступа
 from django.contrib import messages
-from django.contrib.auth import (
-    authenticate, get_backends, get_permission_codename, login, logout, update_session_auth_hash
-)
+from django.contrib.auth import (authenticate, get_backends, get_permission_codename,
+                                login, logout, update_session_auth_hash)
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
+
+# Импорт для кастомной формы авторизации
+from allauth.account.views import email
+from .forms import CustomSignupForm, CustomLoginForm
+from .forms import UpdateProfileForm
+
+# Импорты рендеринга шаблонов
 from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.views import View
 
-from allauth.account.views import email
-
-from .forms import CustomSignupForm, CustomLoginForm
-from .forms import UpdateProfileForm
-
+# Импорты для создания и управления продуктом
 from .models import Product
 from .forms import CreateProductForm
 
-from .models import Order
+# Импорты для управления формой заказа
+from django.db import transaction, DatabaseError
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .models import Order, OrderItem
 from .forms import OrderForm, OrderItemFormSet
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -176,55 +185,162 @@ def is_customer(user):
     return user.groups.filter(name='customer').exists()
 
 
+# Метод для добавления товара в корзину
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
-def create_order(request):
+def add_product_to_order(request, product_id):
+    """Добавляет товар в текущий заказ (в сессию).
+
+    Args:
+        request: HTTP запрос.
+        product_id: Идентификатор продукта, который нужно добавить в заказ.
+
+    Returns:
+        HttpResponse: Перенаправление на главную страницу.
     """
-    Метод создания заказа. При создании заказа происходит валидация формы и формы с выбором продуктов.
-    Если все проверки прошли успешно, происходит сохранение данных в базе данных.
+    try:
+        product = get_object_or_404(Product, id=product_id)
+
+        # Проверка наличия уникального ключа заказа в сессии
+        if 'order_key' not in request.session:
+            order_key = f"{request.user.id}_{datetime.datetime.now().timestamp()}"
+            request.session['order_key'] = order_key
+            request.session['order_items'] = {}
+
+        order_items = request.session['order_items']
+
+        # Увеличиваем количество товара, если он уже в корзине
+        if str(product_id) in order_items:
+            order_items[str(product_id)] += 1
+        else:
+            order_items[str(product_id)] = 1
+
+        request.session.modified = True
+        messages.success(request, f'{product.name} добавлен в заказ.')
+    except Exception as e:
+        logger.error(f"Ошибка при добавлении продукта в заказ: {e}")
+        messages.error(request, 'Произошла ошибка при добавлении товара в заказ.')
+
+    return redirect('main_page')
+
+
+@login_required(login_url='page_errors')
+@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+@require_POST
+def update_cart(request):
+    """Обновляет содержимое корзины. Удаляет одну из позиций или очищает всю корзину
+
+    Args:
+        request: HTTP запрос.
+
+    Returns:
+        JsonResponse: JSON с обновленным содержимым корзины.
     """
-    if request.method == 'POST':
-        form = OrderForm(request.POST)
-        formset = OrderItemFormSet(request.POST)
+    action = request.POST.get('action')
+    product_id = request.POST.get('product_id')
+    order_items = request.session.get('order_items', {})
 
-        if form.is_valid() and formset.is_valid():
-            order = form.save(commit=False)
-            order.user = request.user
-            order.save()
 
-            for form_item in formset:
-                order_item = form_item.save(commit=False)
-                order_item.order = order
-                order_item.save()
+    if action == 'remove' and product_id:
+        # Удаляем конкретный элемент из корзины
+        if str(product_id) in order_items:
+            del order_items[str(product_id)]
+            request.session['order_items'] = order_items
 
-            return redirect('purchase')  # Перенаправление на страницу покупок со статусом заказов
+    elif action == 'clear':
+        # Очищаем всю корзину
+        request.session.pop('order_items', None)
 
-    else:
-        form = OrderForm()
-        formset = OrderItemFormSet()
+    # Пересчитываем итоговую стоимость
+    new_total_price = calculate_new_total_price(request)
+    return JsonResponse({'new_total_price': new_total_price})
 
-    # Здесь вы можете добавить логику для отображения корзины пользователя
-    # Например, получение текущих товаров в корзине из сессии или базы данных
+def calculate_new_total_price(request):
+    order_items = request.session.get('order_items', {})
+    product_ids = order_items.keys()
+    products = Product.objects.filter(id__in=product_ids)
+    total_price = sum(product.price * order_items[str(product.id)] for product in products)
+    return total_price
 
-    return render(request, 'business_app/order_form.html', {
-        'form': form,
-        'formset': formset,
-    })
+
+@login_required(login_url='page_errors')
+@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+def order_form(request):
+    """Отображает текущий заказ и позволяет его подтвердить.
+
+    Args:
+        request: HTTP запрос.
+
+    Returns:
+        HttpResponse: Рендеринг шаблона с текущим заказом.
+    """
+    cart_items = []  # Инициализация переменной по умолчанию
+
+    try:
+        order_items = request.session.get('order_items', {})
+        product_ids = order_items.keys()
+
+        # Оптимизация загрузки всех продуктов одним запросом
+        products = Product.objects.filter(id__in=product_ids)
+        cart_items = [{'product': product, 'quantity': order_items[str(product.id)]} for product in products]
+
+        if request.method == 'POST':
+            if cart_items:
+                try:
+                    with transaction.atomic():
+                        order = Order(user=request.user, order_key=request.session['order_key'])
+                        order.save()
+
+                        for item in cart_items:
+                            OrderItem.objects.create(order=order, product=item['product'], quantity=item['quantity'])
+
+                        # Очищаем сессию после сохранения заказа
+                        request.session.pop('order_key', None)
+                        request.session.pop('order_items', None)
+                        messages.success(request, 'Ваш заказ успешно оформлен!')
+                        return redirect('purchase')
+                except DatabaseError as db_error:
+                    logger.error(f"Ошибка базы данных при подтверждении заказа: {db_error}")
+                    messages.error(request, 'Произошла ошибка при подтверждении заказа.')
+            else:
+                messages.error(request, 'Невозможно подтвердить пустой заказ.')
+    except Exception as e:
+        logger.error(f"Ошибка при управлении заказом: {e}")
+        messages.error(request, 'Произошла ошибка при обработке заказа.')
+
+    return render(request, 'business_app/order_form.html', {'cart_items': cart_items})
 
 
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
 def purchase(request):
-    """Получение статуса текущего заказа пользователя и его истории заказов. """
-    current_order = Order.objects.filter(user=request.user, status='confirmed').first()
-    completed_orders = Order.objects.filter(user=request.user, status='completed')
-    canceled_orders = Order.objects.filter(user=request.user, status='canceled')
+    """Получение статуса текущего заказа пользователя и его истории заказов.
 
-    context = {
-        'current_order': current_order,
-        'completed_orders': completed_orders,
-        'canceled_orders': canceled_orders,
-    }
+    Args:
+        request: HTTP запрос.
+
+    Returns:
+        HttpResponse: Рендеринг страницы с информацией о заказах.
+    """
+    try:
+        """
+        Получаем статсусы заказа (текущий, доставленные, выполненные и отмененные)
+        """
+        current_order = Order.objects.filter(user=request.user, status=Order.STATUS_CONFIRMED).select_related('user').first()
+        delivered_orders = Order.objects.filter(user=request.user, status=Order.STATUS_DELIVERED).select_related('user')
+        completed_orders = Order.objects.filter(user=request.user, status=Order.STATUS_COMPLETED).select_related('user')
+        canceled_orders = Order.objects.filter(user=request.user, status=Order.STATUS_CANCELED).select_related('user')
+
+        context = {
+            'current_order': current_order,
+            'delivered_orders': delivered_orders,
+            'completed_orders': completed_orders,
+            'canceled_orders': canceled_orders,
+        }
+    except Exception as e:
+        logger.error(f"Ошибка при получении статуса заказа: {e}")
+        messages.error(request, 'Произошла ошибка при загрузке информации о заказах.')
+        context = {}
 
     return render(request, 'business_app/purchase.html', context)
 
