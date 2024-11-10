@@ -3,21 +3,106 @@
 
 {% block content %}
 
-    {% if message %}
-        <div class="alert alert-info" role="alert">
-            {{ message }}
-        </div>
-        {% if not user.is_authenticated %}
-            <a href="{% url 'authorization' %}" class="btn btn-primary">Перейти к авторизации</a>
-        {% endif %}
-    {% else %}
+<div class="purchase-nav">
+    <a href="{% url 'order_form' %}" class="btn btn-secondary">Корзина</a>
+    <button id="toggle-history" class="btn btn-secondary">История продаж</button>
+    <a href="{% url 'review' %}" class="btn btn-secondary">Отзывы</a>
+</div>
 
-        <h2>Ваши покупки</h2>
-        {% for item in order.items.all %}
-            <p>{{ item.quantity }} x {{ item.product.name }} @ {{ item.price }}</p>
-        {% endfor %}
-    <p>Итоговая сумма: {{ order.total_amount }}</p>
-
+{% if message %}
+    <div class="alert alert-info" role="alert">
+        {{ message }}
+    </div>
+    {% if not user.is_authenticated %}
+        <a href="{% url 'authorization' %}" class="btn btn-primary">Перейти к авторизации</a>
     {% endif %}
+{% else %}
+    <h2>Ваши покупки</h2>
+
+<div class="current-orders">
+    <h3>Текущие заказы</h3>
+    {% with current_orders=orders.filter(status__in=['Подтвержден', 'Передан курьеру']) %}
+    {% if current_orders %}
+        {% for order in current_orders %}
+            <div>
+                {% for item in order.items.all %}
+                    <p>{{ item.quantity }} x {{ item.product.name }} @ {{ item.price }} - Статус: {{ item.status }}</p>
+                {% endfor %}
+                <a href="{% url 'order_form' order.id %}" class="btn btn-warning">Изменить</a>
+                {% if order.status == 'Подтвержден' and order.status_change_time|time_since < 30 %}
+                    <form method="post" style="display: inline;" class="cancel-order-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                        <button type="button" class="btn btn-danger cancel-order-button" data-order-id="{{ order.id }}">Отменить</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Нет не исполненных заказов</p>
+    {% endif %}
+    {% endwith %}
+</div>
+
+<div id="order-history" style="display: none;">
+    <h3>История заказов</h3>
+    {% with completed_orders=orders.filter(status__in=['Завершен', 'Отменен']) %}
+    {% if completed_orders %}
+        {% for order in completed_orders %}
+            <div>
+                {% for item in order.items.all %}
+                    <p>{{ item.quantity }} x {{ item.product.name }} @ {{ item.price }} - Статус: {{ item.status }}</p>
+                {% endfor %}
+                <a href="{% url 'order_form' %}?repeat={{ order.id }}" class="btn btn-success">Повторить</a>
+                <a href="{% url 'review' order.id %}" class="btn btn-info">Оставить отзыв</a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Нет закрытых заказов</p>
+    {% endif %}
+    {% endwith %}
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.cancel-order-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+            fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `order_id=${orderId}&action=cancel`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Если запрос успешен, скрываем заказ из текущих заказов
+                    this.closest('div').style.display = 'none';
+                } else {
+                    // Обрабатываем ошибку
+                    alert('Не удалось отменить заказ');
+                }
+            });
+        });
+    });
+});
+</script>
+
+<script>
+    document.getElementById('toggle-history').addEventListener('click', function() {
+        var historyDiv = document.getElementById('order-history');
+        if (historyDiv.style.display === 'none' || historyDiv.style.display === '') {
+            historyDiv.style.display = 'block';
+        } else {
+            historyDiv.style.display = 'none';
+        }
+    });
+</script>
 
 {% endblock %}

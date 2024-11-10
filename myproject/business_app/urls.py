@@ -24,6 +24,8 @@ urlpatterns = [
 
     path("page_errors/", views.handle_permission_denied_or_not_found, name="page_errors"),
 
+    path('review/', views.sale, name='review'),
+
     # Добавьте другие URL-маршруты, необходимые для вашего приложения
 ]
 

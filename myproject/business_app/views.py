@@ -1,6 +1,8 @@
 
 import logging
 import datetime
+from datetime import timedelta
+from django.utils import timezone
 
 # Импорты админки, авторизации и разграничения доступа
 from django.contrib import messages
@@ -28,6 +30,7 @@ from .models import Product
 from .forms import CreateProductForm
 
 # Импорты для управления формой заказа
+import uuid  # Генерации уникального идентификатора в процессе незавершенной покупки
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -39,6 +42,7 @@ from .forms import OrderForm, OrderItemFormSet
 logger = logging.getLogger(__name__)
 
 """ Блок классов управляющий авторизацией и регистрацией."""
+
 
 def get_user_group_context(user):
     """ Метод определения группы пользователя. """
@@ -314,33 +318,96 @@ def order_form(request):
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
 def purchase(request):
-    """Получение статуса текущего заказа пользователя и его истории заказов.
+    """
+    - Обработка AJAX-запроса для отмены заказа, включая проверку возможности отмены.
+    - Получение и отображение текущих и прошлых заказов.
+    - Генерация уникального ключа заказа для сессии.
+    - Обработка повторных заказов на основе существующих данных.
 
     Args:
-        request: HTTP запрос.
+        request: Объект HTTP-запроса.
 
     Returns:
-        HttpResponse: Рендеринг страницы с информацией о заказах.
+        JsonResponse: JSON-ответ для AJAX-запросов, указывающий на успешность или неудачу.
+        HttpResponse: Отрендеренная HTML-страница с информацией о заказах для обычных GET-запросов.
+
+    Raises:
+        Exception: Общая обработка исключений для неожиданных ошибок.
     """
     try:
-        """
-        Получаем статсусы заказа (текущий, доставленные, выполненные и отмененные)
-        """
-        current_order = Order.objects.filter(user=request.user, status=Order.STATUS_CONFIRMED).select_related('user').first()
-        delivered_orders = Order.objects.filter(user=request.user, status=Order.STATUS_DELIVERED).select_related('user')
-        completed_orders = Order.objects.filter(user=request.user, status=Order.STATUS_COMPLETED).select_related('user')
-        canceled_orders = Order.objects.filter(user=request.user, status=Order.STATUS_CANCELED).select_related('user')
+        # Проверка, является ли запрос POST и выполнен ли он через AJAX.
+        if request.method == 'POST' and request.is_ajax():
+            # Проверка, является ли запрос запросом на отмену заказа.
+            if 'cancel_order' in request.POST:
+                order_id = request.POST.get('order_id')
+                # Получение заказа, который соответствует критериям.
+                order = Order.objects.filter(
+                    id=order_id, user=request.user, status=Order.STATUS_CONFIRMED
+                ).first()
+                # Если заказ существует и может быть отменен в течение 30 минут.
+                if order and (timezone.now() - order.updated_at) < timedelta(minutes=30):
+                    order.status = Order.STATUS_CANCELED
+                    order.save()
+                    logger.info(f"Заказ {order_id} был успешно отменен пользователем {request.user}.")
+                    return JsonResponse({'success': True, 'message': 'Ваш заказ был успешно отменен.'})
+                else:
+                    logger.warning(f"Попытка отмены заказа {order_id} пользователем {request.user} не удалась.")
+                    return JsonResponse({'success': False, 'message': 'Заказ не может быть отменен.'})
 
-        context = {
+        # Получение текущего подтвержденного заказа для отображения.
+        current_order = Order.objects.filter(
+            user=request.user, status=Order.STATUS_CONFIRMED
+        ).select_related('user').first()
+        logger.debug(f"Текущий подтвержденный заказ: {current_order}")
+
+        # Получение других типов заказов для отображения на странице.
+        delivered_orders = Order.objects.filter(
+            user=request.user, status=Order.STATUS_DELIVERED
+        ).select_related('user')
+        completed_orders = Order.objects.filter(
+            user=request.user, status=Order.STATUS_COMPLETED
+        ).select_related('user')
+        canceled_orders = Order.objects.filter(
+            user=request.user, status=Order.STATUS_CANCELED
+        ).select_related('user')
+
+        # Генерация уникального ключа заказа для сессии, если он ещё не был создан.
+        if not request.session.get('order_key'):
+            request.session['order_key'] = str(uuid.uuid4())
+            logger.debug(f"Сгенерирован новый уникальный ключ заказа: {request.session['order_key']}")
+
+        # Обработка запроса на повторение предыдущего заказа.
+        repeat_order_id = request.GET.get('repeat')
+        if repeat_order_id:
+            repeat_order = Order.objects.filter(
+                id=repeat_order_id, user=request.user
+            ).prefetch_related('items').first()
+            if repeat_order:
+                request.session['repeat_order_data'] = {
+                    'items': [
+                        {'product_id': item.product.id, 'quantity': item.quantity, 'price': item.price}
+                        for item in repeat_order.items.all()
+                    ]
+                }
+                messages.success(request, 'Вы можете повторить заказ. Отредактируйте данные при необходимости.')
+                logger.info(f"Пользователь {request.user} запланировал повторение заказа {repeat_order_id}.")
+                return redirect('order_form')
+
+        # Компиляция заказов в словарь и добавление в контекст для рендеринга.
+        orders = {
             'current_order': current_order,
             'delivered_orders': delivered_orders,
             'completed_orders': completed_orders,
             'canceled_orders': canceled_orders,
         }
+
+        context = {
+            'orders': orders
+        }
+
     except Exception as e:
-        logger.error(f"Ошибка при получении статуса заказа: {e}")
-        messages.error(request, 'Произошла ошибка при загрузке информации о заказах.')
-        context = {}
+        logger.error(f"Ошибка при управлении заказами: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Произошла ошибка при обработке ваших заказов.'})
 
     return render(request, 'business_app/purchase.html', context)
 
