@@ -269,85 +269,60 @@ def calculate_new_total_price(request):
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
 def order_form(request):
-    # Если метод запроса POST, вызываем функцию для обработки POST-запроса
     if request.method == 'POST':
         return handle_post_request(request)
     else:
-        # В противном случае, обрабатываем GET-запрос
         return handle_get_request(request)
 
+
 def handle_post_request(request):
-    # Получаем элементы заказа из сессии
     order_items = request.session.get('order_items', {})
-    # Инициализируем форму заказа с данными из POST-запроса
     form = OrderForm(request.POST)
-    # Проверяем, что форма валидна и есть элементы заказа
+
     if form.is_valid() and order_items:
         try:
-            # Используем транзакцию для атомарности операции
             with transaction.atomic():
-                # Создаем заказ, но пока не сохраняем в базе
                 order = form.save(commit=False)
                 order.user = request.user
-                # Сохраняем заказ в базе данных
                 order.save()
 
-                # Перебираем товары в заказе
                 for product_id, quantity in order_items.items():
-                    # Получаем продукт по ID
-                    product = Product.objects.get(id=product_id)
-                    # Создаем элемент заказа
+                    product = get_object_or_404(Product, id=product_id)
                     OrderItem.objects.create(order=order, product=product, quantity=quantity)
 
-                # Очищаем сессию
                 clear_session(request)
-                # Сообщаем об успешном оформлении заказа
                 messages.success(request, 'Ваш заказ успешно оформлен!')
-                # Перенаправляем на страницу покупки
                 return redirect('purchase')
         except DatabaseError as db_error:
-            # Логируем ошибку базы данных и выводим сообщение об ошибке
             logger.error(f"Ошибка базы данных при подтверждении заказа: {db_error}")
             messages.error(request, 'Произошла ошибка при подтверждении заказа.')
     else:
-        # Выводим сообщение об ошибке, если заказ пустой или данные формы некорректны
         messages.error(request, 'Невозможно подтвердить пустой заказ или данные формы некорректны.')
-    # Рендерим форму заказа с ошибками
+
     return render_order_form(request, form)
 
+
 def handle_get_request(request):
-    # Получаем элементы заказа из сессии
     order_items = request.session.get('order_items', {})
-    # Инициализируем пустую форму заказа
     form = OrderForm()
-    # Рендерим форму заказа
+
+    if not order_items:
+        messages.info(request, 'Ваша корзина пуста. Пожалуйста, добавьте товары.')
+
     return render_order_form(request, form, order_items)
 
-def render_order_form(request, form, order_items=None):
-    if order_items:
-        # Получаем ID продуктов из элементов заказа
-        product_ids = order_items.keys()
-        # Получаем продукты из базы данных
-        products = Product.objects.filter(id__in=product_ids)
-        # Формируем список элементов корзины
-        cart_items = [{'product': product, 'quantity': order_items[str(product.id)]} for product in products]
-        # Подсчитываем общую стоимость заказа
-        total_price = sum(item['product'].price * item['quantity'] for item in cart_items)
-    else:
-        # Если элементов заказа нет, создаем пустой список и устанавливаем общую стоимость в 0
-        cart_items = []
-        total_price = 0
-    # Рендерим HTML-шаблон с данными формы и элементами корзины
-    return render(request, 'business_app/order_form.html', {
-        'form': form,
-        'cart_items': cart_items,
-        'total_price': total_price
-    })
 
 def clear_session(request):
-    # Удаляем ключи сессии, связанные с заказом
-    request.session.pop('order_key', None)
-    request.session.pop('order_items', None)
+    if 'order_items' in request.session:
+        del request.session['order_items']
+
+
+def render_order_form(request, form, order_items=None):
+    # Замените 'order_form.html' на имя вашего шаблона
+    return render(request, 'business_app/order_form.html', {
+        'form': form,
+        'order_items': order_items,
+    })
 
 
 @login_required(login_url='page_errors')
