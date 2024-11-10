@@ -2,25 +2,31 @@
 {% load static %}
 
 {% block content %}
-<h2>Форма заказа</h2>
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+
+    <h3>Информация о заказе:</h3>
+    {{ order_form.phone.label_tag }} {{ order_form.phone }}
+    {{ order_form.address.label_tag }} {{ order_form.address }}
+    {{ order_form.comment.label_tag }} {{ order_form.comment }}
 
     <h3>Ваши товары:</h3>
     <ul id="cart-items">
-        {% for item in cart_items %}
-        <li class="cart-item" data-item-id="{{ item.product.id }}">
-            {{ item.product.name }} -
-            <input type="number" class="quantity-input" name="quantity_{{ item.product.id }}" value="{{ item.quantity }}" min="0"> шт.
-            <a href="#" class="remove-item" data-item-id="{{ item.product.id }}">Удалить</a>
+        {{ order_items_formset.management_form }}
+        {% for form in order_items_formset %}
+        <li class="cart-item">
+            {{ form.product.label }} -
+            {{ form.quantity.label_tag }} {{ form.quantity }}
+            <a href="#" class="remove-item" data-item-id="{{ form.product.value }}">Удалить</a>
         </li>
         {% endfor %}
     </ul>
+
     <h3 class="cart-summary">Итог: <span id="total-price">{{ total_price }}</span></h3>
 
     <button type="submit">Оформить заказ</button>
     <a href="#" id="clear-cart">Сбросить всё</a>
+    <a href="{% url 'main_page' %}">Добавить товар</a>
 </form>
 
 <script src="{% static 'js/jquery.min.js' %}"></script>
@@ -33,7 +39,7 @@
             var itemElement = $(this).closest('.cart-item');
 
             $.ajax({
-                url: '{% url "update_cart" %}',
+                url: '{% url "order_form" %}',
                 method: 'POST',
                 data: {
                     action: 'remove',
@@ -54,7 +60,7 @@
             event.preventDefault();
 
             $.ajax({
-                url: '{% url "update_cart" %}',
+                url: '{% url "order_form" %}',
                 method: 'POST',
                 data: {
                     action: 'clear',
@@ -75,7 +81,7 @@
             var newQuantity = $(this).val();
 
             $.ajax({
-                url: '{% url "update_cart" %}',
+                url: '{% url "order_form" %}',
                 method: 'POST',
                 data: {
                     action: 'update',

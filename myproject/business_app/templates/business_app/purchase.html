@@ -21,7 +21,7 @@
 
 <div class="current-orders">
     <h3>Текущие заказы</h3>
-    {% with current_orders=orders.filter(status__in=['Подтвержден', 'Передан курьеру']) %}
+    {% with current_orders=orders.filter(status__in=['confirmed', 'delivered']) %}
     {% if current_orders %}
         {% for order in current_orders %}
             <div>
@@ -29,7 +29,7 @@
                     <p>{{ item.quantity }} x {{ item.product.name }} @ {{ item.price }} - Статус: {{ item.status }}</p>
                 {% endfor %}
                 <a href="{% url 'order_form' order.id %}" class="btn btn-warning">Изменить</a>
-                {% if order.status == 'Подтвержден' and order.status_change_time|time_since < 30 %}
+                {% if order.status == 'confirmed' and order.status_change_time|time_since < 30 %}
                     <form method="post" style="display: inline;" class="cancel-order-form">
                         {% csrf_token %}
                         <input type="hidden" name="order_id" value="{{ order.id }}">
@@ -46,7 +46,7 @@
 
 <div id="order-history" style="display: none;">
     <h3>История заказов</h3>
-    {% with completed_orders=orders.filter(status__in=['Завершен', 'Отменен']) %}
+    {% with completed_orders=orders.filter(status__in=['completed', 'canceled']) %}
     {% if completed_orders %}
         {% for order in completed_orders %}
             <div>
