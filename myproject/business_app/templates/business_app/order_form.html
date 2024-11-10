@@ -2,26 +2,24 @@
 {% load static %}
 
 {% block content %}
+<h2>Форма заказа</h2>
 <form method="post">
     {% csrf_token %}
-
     <h3>Информация о заказе:</h3>
-    {{ order_form.phone.label_tag }} {{ order_form.phone }}
-    {{ order_form.address.label_tag }} {{ order_form.address }}
-    {{ order_form.comment.label_tag }} {{ order_form.comment }}
+    {{ form.phone }}
+    {{ form.address }}
+    {{ form.comment }}
 
     <h3>Ваши товары:</h3>
     <ul id="cart-items">
-        {{ order_items_formset.management_form }}
-        {% for form in order_items_formset %}
-        <li class="cart-item">
-            {{ form.product.label }} -
-            {{ form.quantity.label_tag }} {{ form.quantity }}
-            <a href="#" class="remove-item" data-item-id="{{ form.product.value }}">Удалить</a>
+        {% for item in cart_items %}
+        <li class="cart-item" data-item-id="{{ item.product.id }}">
+            {{ item.product.name }} -
+            <input type="number" class="quantity-input" name="quantity_{{ item.product.id }}" value="{{ item.quantity }}" min="0"> шт.
+            <a href="#" class="remove-item" data-item-id="{{ item.product.id }}">Удалить</a>
         </li>
         {% endfor %}
     </ul>
-
     <h3 class="cart-summary">Итог: <span id="total-price">{{ total_price }}</span></h3>
 
     <button type="submit">Оформить заказ</button>

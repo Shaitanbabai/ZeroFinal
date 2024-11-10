@@ -187,55 +187,6 @@ def is_customer(user):
     """Проверка, является ли пользователь членом группы 'customer'."""
     return user.groups.filter(name='customer').exists()
 
-# Метод для создания нового заказа
-@login_required(login_url='page_errors')
-@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
-def create_order(request):
-    """Создает новый заказ для текущего пользователя.
-    """
-    # Код Кодеиума
-    # order_key = request.session.get('order_key')
-    # if order_key:
-    #     order = Order.objects.create(user=request.user, key=order_key)
-    #     order_items = request.session.get('order_items')
-    #
-    #     if order_items:
-    #         for item in order_items:
-    #             OrderItem.objects.create(
-    #                 order=order,
-    #                 product=item['product'],
-    #                 quantity=item['quantity'],
-    #                 price=item['price']
-    #             )
-    #
-    #     del request.session['order_key']
-    #     del request.session['order_items']
-    #
-    #     return redirect('business_app/order_form.html')
-    # Нейрокотовый код
-    # if request.method == 'POST':
-    #     order_form = OrderForm(request.POST)
-    #     order_items_formset = OrderItemFormSet(request.POST)
-    #
-    #     if order_form.is_valid() and order_items_formset.is_valid():
-    #         order = order_form.save(commit=False)
-    #         order.user = request.user  # Предполагается, что пользователь аутентифицирован
-    #         order.save()
-    #
-    #         order_items_formset.instance = order
-    #         order_items_formset.save()
-    #
-    #         return redirect('order_form')  # Замените на ваш URL успешного завершения
-    #
-    # else:
-    #     order_form = OrderForm()
-    #     order_items_formset = OrderItemFormSet()
-    #
-    # return render(request, 'business_app/order_form.html', {
-    #     'order_form': order_form,
-    #     'order_items_formset': order_items_formset,
-    # })
-
 
 # Метод для добавления товара в корзину
 @login_required(login_url='page_errors')
@@ -318,56 +269,85 @@ def calculate_new_total_price(request):
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
 def order_form(request):
-    cart_items = []  # Инициализация переменной по умолчанию
-    total_price = 0  # Общая стоимость по умолчанию
-    form = OrderForm()  # Создайте экземпляр формы
+    # Если метод запроса POST, вызываем функцию для обработки POST-запроса
+    if request.method == 'POST':
+        return handle_post_request(request)
+    else:
+        # В противном случае, обрабатываем GET-запрос
+        return handle_get_request(request)
 
-    try:
-        order_items = request.session.get('order_items', {})
+def handle_post_request(request):
+    # Получаем элементы заказа из сессии
+    order_items = request.session.get('order_items', {})
+    # Инициализируем форму заказа с данными из POST-запроса
+    form = OrderForm(request.POST)
+    # Проверяем, что форма валидна и есть элементы заказа
+    if form.is_valid() and order_items:
+        try:
+            # Используем транзакцию для атомарности операции
+            with transaction.atomic():
+                # Создаем заказ, но пока не сохраняем в базе
+                order = form.save(commit=False)
+                order.user = request.user
+                # Сохраняем заказ в базе данных
+                order.save()
+
+                # Перебираем товары в заказе
+                for product_id, quantity in order_items.items():
+                    # Получаем продукт по ID
+                    product = Product.objects.get(id=product_id)
+                    # Создаем элемент заказа
+                    OrderItem.objects.create(order=order, product=product, quantity=quantity)
+
+                # Очищаем сессию
+                clear_session(request)
+                # Сообщаем об успешном оформлении заказа
+                messages.success(request, 'Ваш заказ успешно оформлен!')
+                # Перенаправляем на страницу покупки
+                return redirect('purchase')
+        except DatabaseError as db_error:
+            # Логируем ошибку базы данных и выводим сообщение об ошибке
+            logger.error(f"Ошибка базы данных при подтверждении заказа: {db_error}")
+            messages.error(request, 'Произошла ошибка при подтверждении заказа.')
+    else:
+        # Выводим сообщение об ошибке, если заказ пустой или данные формы некорректны
+        messages.error(request, 'Невозможно подтвердить пустой заказ или данные формы некорректны.')
+    # Рендерим форму заказа с ошибками
+    return render_order_form(request, form)
+
+def handle_get_request(request):
+    # Получаем элементы заказа из сессии
+    order_items = request.session.get('order_items', {})
+    # Инициализируем пустую форму заказа
+    form = OrderForm()
+    # Рендерим форму заказа
+    return render_order_form(request, form, order_items)
+
+def render_order_form(request, form, order_items=None):
+    if order_items:
+        # Получаем ID продуктов из элементов заказа
         product_ids = order_items.keys()
-
-        # Оптимизация загрузки всех продуктов одним запросом
+        # Получаем продукты из базы данных
         products = Product.objects.filter(id__in=product_ids)
+        # Формируем список элементов корзины
         cart_items = [{'product': product, 'quantity': order_items[str(product.id)]} for product in products]
-
-        # Рассчитываем общую стоимость
+        # Подсчитываем общую стоимость заказа
         total_price = sum(item['product'].price * item['quantity'] for item in cart_items)
-
-        if request.method == 'POST':
-            form = OrderForm(request.POST)  # Обновите форму с данными POST
-            if form.is_valid() and cart_items:
-                try:
-                    with transaction.atomic():
-                        order = Order(user=request.user, order_key=request.session.get('order_key', ''))
-                        # Заполняем поля формы данными
-                        order.phone = form.cleaned_data['phone']
-                        order.address = form.cleaned_data['address']
-                        order.comment = form.cleaned_data['comment']
-                        order.save()
-
-                        for item in cart_items:
-                            OrderItem.objects.create(order=order, product=item['product'], quantity=item['quantity'])
-
-                        # Очищаем сессию после сохранения заказа
-                        request.session.pop('order_key', None)
-                        request.session.pop('order_items', None)
-                        messages.success(request, 'Ваш заказ успешно оформлен!')
-                        return redirect('purchase')
-                except DatabaseError as db_error:
-                    logger.error(f"Ошибка базы данных при подтверждении заказа: {db_error}")
-                    messages.error(request, 'Произошла ошибка при подтверждении заказа.')
-            else:
-                messages.error(request, 'Невозможно подтвердить пустой заказ или данные формы некорректны.')
-    except Exception as e:
-        logger.error(f"Ошибка при управлении заказом: {e}")
-        messages.error(request, 'Произошла ошибка при обработке заказа.')
-
-    # Передача формы, товаров и общей стоимости в шаблон
+    else:
+        # Если элементов заказа нет, создаем пустой список и устанавливаем общую стоимость в 0
+        cart_items = []
+        total_price = 0
+    # Рендерим HTML-шаблон с данными формы и элементами корзины
     return render(request, 'business_app/order_form.html', {
         'form': form,
         'cart_items': cart_items,
         'total_price': total_price
     })
+
+def clear_session(request):
+    # Удаляем ключи сессии, связанные с заказом
+    request.session.pop('order_key', None)
+    request.session.pop('order_items', None)
 
 
 @login_required(login_url='page_errors')
