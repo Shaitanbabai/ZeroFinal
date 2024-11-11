@@ -12,7 +12,7 @@
 
     <h3>Ваши товары:</h3>
     <ul id="order_items">
-        {% for item in cart_items %}
+        {% for item in order_items %}
         <li class="order-item" data-item-id="{{ item.product.id }}">
             {{ item.product.name }} -
             <input type="number" class="quantity-input" name="quantity_{{ item.product.id }}" value="{{ item.quantity }}" min="0"> шт.
