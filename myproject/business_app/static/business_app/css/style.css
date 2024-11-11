@@ -108,25 +108,23 @@ html, body {
    Каталог товаров
    ============================== */
 .catalogue {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    overflow-y: auto;
-    max-height: calc(100vh - 200px); /* Высота с учетом отступов */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    justify-items: stretch;
 }
 
 .card {
-    margin: 10px;
-    flex: 1 1 calc(33.333% - 20px); /* Три карточки в ряд */
     display: flex;
     flex-direction: column;
-    height: 100%; /* Позволяет карточке заполнять весь доступный вертикальный размер */
+    height: 80%;
+    height: 80%
 }
 
 .card-body {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
 }
 
 .card-title {
@@ -138,6 +136,10 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 1rem;
+}
+
+.invisible {
+    visibility: hidden;
 }
 
 .card-button {
@@ -176,6 +178,8 @@ html, body {
 
 
 /* ==============================
+   Стили для пагинации
+   ============================== */
 .pagination {
     margin-top: 20px;
 }

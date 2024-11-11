@@ -1,23 +1,30 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% load form_tags %}  {# Загрузка вашего модуля с пользовательскими фильтрами #}
 {% block content %}
 
 <div class="main-page">
 
     <!-- ==== Каталог товаров ==== -->
-    <section class="catalogue mt-4 mb-5 d-flex flex-wrap">
+    <section class="catalogue mt-4 mb-5">
         {% for product in products %}
-        <!-- Карточка товара -->
-        <article class="card m-2" style="width: 18rem;">
-            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
-            <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{ product.name }}</h5>
-                <p class="card-price">{{ product.price }} ₽</p>
-                <p class="card-text flex-grow-1">{{ product.description }}</p>
-                <a href="{% url 'product_detail' product.id %}" class="btn btn-primary mt-auto">Подробнее</a>
-            </div>
-        </article>
+            {% if product.is_active %}
+            <!-- Карточка товара -->
+            <article class="card product-card m-2">
+                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-price">{{ product.price }} ₽</p>
+                    <p class="card-text flex-grow-1">{{ product.description }}</p>
+                    <a href="{% url 'product_detail' product.id %}" class="btn card-button mt-auto">Подробнее</a>
+                </div>
+            </article>
+            {% endif %}
+        {% endfor %}
+
+        {# Чтобы заполнить карточки до 9, найдем разницу и создадим невидимые карточки #}
+        {% for _ in 9|add:"-1"|add:products|length|create_range %}
+            <article class="card product-card m-2 invisible"></article>
         {% endfor %}
     </section>
 
