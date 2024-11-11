@@ -12,13 +12,13 @@
 
     <h3>Ваши товары:</h3>
     <ul id="order_items">
-        {% for item in order_items %}
-        <li class="order-item" data-item-id="{{ item.product.id }}">
-            {{ item.product.name }} -
-            <input type="number" class="quantity-input" name="quantity_{{ item.product.id }}" value="{{ item.quantity }}" min="0"> шт.
-            <a href="#" class="remove-item" data-item-id="{{ item.product.id }}">Удалить</a>
-        </li>
-        {% endfor %}
+    {% for item in products_with_quantities %}
+    <li class="order-item" data-item-id="{{ item.product.id }}">
+        {{ item.product.name }} -
+        <input type="number" class="quantity-input" name="quantity_{{ item.product.id }}" value="{{ item.quantity }}" min="0"> шт.
+        <a href="#" class="remove-item" data-item-id="{{ item.product.id }}">Удалить</a>
+    </li>
+    {% endfor %}
     </ul>
     <h3 class="cart-summary">Итог: <span id="total-price">{{ total_price }}</span></h3>
 

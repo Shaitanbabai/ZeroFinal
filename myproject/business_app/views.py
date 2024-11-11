@@ -279,6 +279,11 @@ def handle_post_request(request):
     order_items = request.session.get('order_items', {})
     form = OrderForm(request.POST)
 
+    products_with_quantities = []
+    for product_id, quantity in order_items.items():
+        product = get_object_or_404(Product, id=product_id)
+        products_with_quantities.append({'product': product, 'quantity': quantity})
+
     if form.is_valid() and order_items:
         try:
             with transaction.atomic():
@@ -299,17 +304,23 @@ def handle_post_request(request):
     else:
         messages.error(request, 'Невозможно подтвердить пустой заказ или данные формы некорректны.')
 
-    return render_order_form(request, form)
+    return render_order_form(request, form, products_with_quantities)
 
 
 def handle_get_request(request):
     order_items = request.session.get('order_items', {})
+    logger.debug(f"Order items in session: {order_items}")
     form = OrderForm()
 
-    if not order_items:
+    products_with_quantities = []
+    for product_id, quantity in order_items.items():
+        product = get_object_or_404(Product, id=product_id)
+        products_with_quantities.append({'product': product, 'quantity': quantity})
+
+    if not products_with_quantities:
         messages.info(request, 'Ваша корзина пуста. Пожалуйста, добавьте товары.')
 
-    return render_order_form(request, form, order_items)
+    return render_order_form(request, form, products_with_quantities)
 
 
 def clear_session(request):
@@ -317,11 +328,10 @@ def clear_session(request):
         del request.session['order_items']
 
 
-def render_order_form(request, form, order_items=None):
-    # Замените 'order_form.html' на имя вашего шаблона
+def render_order_form(request, form, products_with_quantities):
     return render(request, 'business_app/order_form.html', {
         'form': form,
-        'order_items': order_items,
+        'products_with_quantities': products_with_quantities
     })
 
 
