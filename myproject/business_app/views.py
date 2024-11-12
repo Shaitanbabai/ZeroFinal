@@ -275,7 +275,7 @@ def order_form(request):
         return handle_post_request(request)
     else:
         return handle_get_request(request)
-    
+
 
 def handle_post_request(request):
     order_items = request.session.get('order_items', {})
