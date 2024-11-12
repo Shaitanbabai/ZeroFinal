@@ -27,14 +27,15 @@
             {% endfor %}
             </ul>
             <h5 class="cart-summary">Итог: <span id="total-price">{{ total_price }}</span></h5>
+            <pre>{{ products_with_quantities|pprint }}</pre>
 
             <h5 class="mb-3 mt-4">Информация о заказе:</h5>
                 <div class="form-group">
-                    <label for="phone">Телефон</label>
+                    <label for="phone">Телефон получателя</label>
                     <input type="text" id="phone" class="form-control" name="phone" value="{{ form.phone.value|default_if_none:'' }}" placeholder="+7(123)456-7890" maxlength="15">
                 </div>
                 <div class="form-group">
-                    <label for="address">Адрес</label>
+                    <label for="address">Адрес получателя</label>
                     <input type="text" id="address" class="form-control" name="address" value="{{ form.address.value|default_if_none:'' }}" placeholder="Москва, Красная пл., д.1, п.1, кв.111">
                 </div>
                 <div class="form-group">
@@ -45,56 +46,75 @@
     </div>
 </div>
 
-<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script>
     $(document).ready(function () {
-        // Удалить элемент из корзины
-        $('.remove-item').click(function (event) {
-            event.preventDefault();
-            var itemId = $(this).data('item-id');
-            var itemElement = $(this).closest('.list-group-item');
+    // Удалить элемент из корзины
+    $('.remove-item').click(function (event) {
+        event.preventDefault();
+        var itemId = $(this).data('item-id');
+        var itemElement = $(this).closest('.list-group-item');
 
-            $.ajax({
-                url: '{% url "order_form" %}',
-                method: 'POST',
-                data: {
-                    action: 'remove',
-                    product_id: itemId,
-csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                success: function (response) {
-                    // Удалить элемент из списка
-                    itemElement.remove();
-                    // Обновить итоговую сумму
-                    $('#total-price').text(response.new_total_price);
-                }
-            });
+        $.ajax({
+            url: '{% url "update_cart" %}',
+            method: 'POST',
+            data: {
+                action: 'remove',
+                product_id: itemId,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function (response) {
+                itemElement.remove();
+                $('#total-price').text(response.new_total_price);
+            }
         });
+    });
 
         // Очистить корзину
-        $('#clear-cart').click(function (event) {
-            event.preventDefault();
+    $('#clear-cart').click(function (event) {
+        event.preventDefault();
 
-            $.ajax({
-                url: '{% url "order_form" %}',
-                method: 'POST',
-                data: {
-                    action: 'clear',
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                success: function (response) {
-                    // Очистить список товаров
-                    $('#order_items').empty();
-                    // Обновить итоговую сумму
-                    $('#total-price').text('0');
-                }
-            });
+        $.ajax({
+            url: '{% url "update_cart" %}', // Убедитесь, что этот URL существует и настроен
+            method: 'POST',
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function (response) {
+                $('#order_items').empty(); // Очистить список товаров
+                $('#total-price').text('0'); // Обнулить итоговую сумму
+            }
         });
+    });
 
         // Изменить количество товара
         $('.quantity-input').change(function () {
-            var itemId = $(this).closest('.list-group-item').data('item-id');
+            var itemId = $(this).closest('.list-group-item').find('.remove-item').data('item-id');
             var newQuantity = $(this).val();
+
+            // Проверка, является ли новое количество числом
+            if (!$.isNumeric(newQuantity) || newQuantity <= 0) {
+                alert('Введите корректное количество.');
+                return;
+            }
+
+            $.ajax({
+                url: '{% url "update_cart" %}',
+                method: 'POST',
+                data: {
+                    action: 'update_quantity',
+                    product_id: itemId,
+                    quantity: newQuantity,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function (response) {
+                // Обновить итоговую сумму
+                    $('#total-price').text(response.new_total_price);
+                },
+                error: function() {
+                    alert('Произошла ошибка при обновлении количества товара.');
+                }
+            });
         });
     });
 </script>

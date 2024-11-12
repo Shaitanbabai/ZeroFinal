@@ -6,6 +6,7 @@ class Product(models.Model):
     """
     Модель продукта. Связана с моделью пользователя. Передает параметры карточки продукта.
     """
+    DoesNotExist = None
     objects = None
     name = models.CharField(max_length=50)
     description = models.TextField(max_length=255)

@@ -23,6 +23,7 @@
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <button type="submit" class="list-group-item list-group-item-action">Купить</button>
                     </form>
+
                 {% elif is_salesman %}
                     <a href="{% url 'update_product' product.id %}" class="list-group-item list-group-item-action">Редактировать</a>
                     <a href="{% url 'toggle_product_status' product.id %}" class="list-group-item list-group-item-action">

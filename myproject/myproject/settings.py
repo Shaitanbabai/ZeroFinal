@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 import re
 import allauth
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -167,6 +168,13 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Использование базы данных для хранения сессий
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True  # Установите True, если используете HTTPS
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_AGE = 7200  # Установите время жизни сессии в секундах
 
 
 # Password validation

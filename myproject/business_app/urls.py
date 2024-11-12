@@ -12,8 +12,10 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path("update_profile/", views.update_profile, name="update_profile"),
 
-    path('order_form/', views.order_form, name='order_form'),  # Форма заказа и корзина
     path('purchase/', views.purchase, name='purchase'),  # Страница "Мои покупки", интерфейс покупателя
+    path('order_form/', views.order_form, name='order_form'),  # Форма заказа и корзина
+    path('add_product_to_order/<int:product_id>/', views.add_product_to_order, name='add_product_to_order'),  # Маршрут для добавления продукта в заказ
+    path('update_cart/', views.update_cart, name='update_cart'),  # Маршрут для обновления корзины
 
     path('sale/', views.sale, name='sale'),  # Страница "Мои продажи", интерфейс продавца
     path('products/', views.product_list, name='product_list'),  # Маршрут к шаблону продукта

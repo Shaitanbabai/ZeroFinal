@@ -37,6 +37,7 @@ from django.views.decorators.http import require_POST
 from .models import Order, OrderItem
 from .forms import OrderForm, OrderItemFormSet
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -192,46 +193,39 @@ def is_customer(user):
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
 def add_product_to_order(request, product_id):
-    """Добавляет товар в текущий заказ (в сессию).
-
-    Args:
-        request: HTTP запрос.
-        product_id: Идентификатор продукта, который нужно добавить в заказ.
-
-    Returns:
-        HttpResponse: Перенаправление на главную страницу.
-    """
+    """Добавляет товар в текущий заказ (в сессию)."""
     try:
         product = get_object_or_404(Product, id=product_id)
 
-        # Проверка наличия уникального ключа заказа в сессии
+        # Логирование перед изменением сессии
+        logger.debug(f"Состояние сессии перед добавлением: {request.session.items()}")
+
         if 'order_key' not in request.session:
             order_key = f"{request.user.id}_{datetime.datetime.now().timestamp()}"
             request.session['order_key'] = order_key
             request.session['order_items'] = {}
 
         order_items = request.session['order_items']
-
-        # Увеличиваем количество товара, если он уже в корзине
-        if str(product_id) in order_items:
-            order_items[str(product_id)] += 1
-        else:
-            order_items[str(product_id)] = 1
-
+        order_items[str(product_id)] = order_items.get(str(product_id), 0) + 1
         request.session.modified = True
+
+        logger.debug(f"Состояние сессии после добавления: {request.session.items()}")
         messages.success(request, f'{product.name} добавлен в заказ.')
+    except Product.DoesNotExist:
+        logger.error(f"Продукт с id {product_id} не найден.")
+        messages.error(request, 'Товар не найден.')
     except Exception as e:
         logger.error(f"Ошибка при добавлении продукта в заказ: {e}")
         messages.error(request, 'Произошла ошибка при добавлении товара в заказ.')
 
-    return redirect('business_app/main_page.html')
+    return redirect('main_page')
 
 
 @login_required(login_url='page_errors')
 @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
 @require_POST
 def update_cart(request):
-    """Обновляет содержимое корзины. Удаляет одну из позиций или очищает всю корзину
+    """Обновляет содержимое корзины. Удаляет одну из позиций, очищает всю корзину или обновляет количество товара.
 
     Args:
         request: HTTP запрос.
@@ -243,7 +237,6 @@ def update_cart(request):
     product_id = request.POST.get('product_id')
     order_items = request.session.get('order_items', {})
 
-
     if action == 'remove' and product_id:
         # Удаляем конкретный элемент из корзины
         if str(product_id) in order_items:
@@ -253,6 +246,15 @@ def update_cart(request):
     elif action == 'clear':
         # Очищаем всю корзину
         request.session.pop('order_items', None)
+
+    elif action == 'update_quantity' and product_id:
+        quantity = int(request.POST.get('quantity', 0))
+        # Обновляем количество товара, если оно больше нуля, иначе удаляем
+        if quantity > 0:
+            order_items[str(product_id)] = quantity
+        else:
+            order_items.pop(str(product_id), None)
+        request.session['order_items'] = order_items
 
     # Пересчитываем итоговую стоимость
     new_total_price = calculate_new_total_price(request)
@@ -273,7 +275,7 @@ def order_form(request):
         return handle_post_request(request)
     else:
         return handle_get_request(request)
-
+    
 
 def handle_post_request(request):
     order_items = request.session.get('order_items', {})
@@ -317,16 +319,18 @@ def handle_get_request(request):
         product = get_object_or_404(Product, id=product_id)
         products_with_quantities.append({'product': product, 'quantity': quantity})
 
+    # Логирование для проверки извлеченных данных
+    logger.debug(f"Products with quantities: {products_with_quantities}")
+
     if not products_with_quantities:
         messages.info(request, 'Ваша корзина пуста. Пожалуйста, добавьте товары.')
 
     return render_order_form(request, form, products_with_quantities)
 
-
 def clear_session(request):
-    if 'order_items' in request.session:
-        del request.session['order_items']
-
+    request.session.pop('order_items', None)
+    request.session.pop('order_key', None)
+    request.session.modified = True
 
 def render_order_form(request, form, products_with_quantities):
     return render(request, 'business_app/order_form.html', {
@@ -508,7 +512,7 @@ def product_detail(request, product_id):
     # Инициализируем контекст
     context = {
         'product': product,
-        'is_customer': False,
+        'is_customer': True,
         'is_salesman': False,
     }
 
