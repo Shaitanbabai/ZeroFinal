@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Корзина</h2>
+    
+    {% if cart.items %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Название</th>
+                    <th scope="col">Количество</th>
+                    <th scope="col">Цена</th>
+                    <th scope="col">Всего</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart.items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.product.price }}</td>
+                    <td>{{ item.total_price }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="3" class="text-right">Общая стоимость:</td>
+                    <td>{{ cart.total_price }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Форма создания заказа -->
+        <form method="post" action="{% url 'create_order' %}">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            
+            <div class="form-group">
+                {{ form.phone.label_tag }}
+                {{ form.phone }}
+                {{ form.phone.errors }}
+            </div>
+            <div class="form-group">
+                {{ form.address.label_tag }}
+                {{ form.address }}
+                {{ form.address.errors }}
+            </div>
+            <div class="form-group">
+                {{ form.comment.label_tag }}
+                {{ form.comment }}
+                {{ form.comment.errors }}
+            </div>
+            <!-- Если telegram_key должен быть виден -->
+            <div class="form-group">
+                {{ form.telegram_key.label_tag }}
+                {{ form.telegram_key }}
+                {{ form.telegram_key.errors }}
+            </div>
+
+            <button type="submit" class="btn btn-success">Оформить заказ</button>
+        </form>
+        
+        <!-- Очистить Корзину -->
+        <form method="post" action="{% url 'clear_cart' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Сбросить всё</button>
+        </form>
+    {% else %}
+        <p>Ваша корзина пуста.</p>
+    {% endif %}
+</div>
+{% endblock %}

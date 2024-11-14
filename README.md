@@ -27,21 +27,26 @@ myproject/
 │       │   ├── main_page.html
 │       │   ├── page_errors.html
 │       │   ├── profile.html
-│       │   ├── profile_update.html
-│       │   ├── password_reset.html
+│       │   ├── update_profile.html
+│       │   │
 │       │   ├── sale.html
+│       │   ├── order_form.html
+│       │   │
 │       │   ├── purchase.html
-│       │   ├── product.html
-│       │   └── product_update.html
+│       │   ├── product_detail.html
+│       │   ├── product_list.html
+│       │   ├── update_product.html
+│       │   │
+│       │   └── review.html
 │       └── base.html 
 │
-├── media
-│   └─ myproject
-│       ├── __init__.py   
-│       ├── asgi.py
-│       ├── settings.py
-│       ├── urls.py
-│       └── wsgi.py
+├── myproject
+│     ├── __init__.py   
+│     ├── asgi.py
+│     ├── settings.py
+│     ├── urls.py
+│     └── wsgi.py
+├── media/
 ├── db.sqlite3
 ├── manage.py       
 └── structure.txt 

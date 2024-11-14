@@ -1,5 +1,5 @@
-
 import logging
+
 import datetime
 from datetime import timedelta
 from django.utils import timezone
@@ -30,20 +30,19 @@ from .models import Product
 from .forms import CreateProductForm
 
 # Импорты для управления формой заказа
-import uuid  # Генерации уникального идентификатора в процессе незавершенной покупки
-from django.db import transaction, DatabaseError
+# from django.views.decorators.http import require_POST
+from django.db import transaction
+from django.db import DatabaseError
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.http import HttpResponse, HttpResponseForbidden
+from functools import wraps
+from .forms import CartForm
 from .models import Order, OrderItem
-from .forms import OrderForm, OrderItemFormSet
-
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
 """ Блок классов управляющий авторизацией и регистрацией."""
-
-
 def get_user_group_context(user):
     """ Метод определения группы пользователя. """
     group_names = user.groups.values_list('name', flat=True)
@@ -182,258 +181,240 @@ def logout_view(request):
     return redirect(reverse('main_page'))
 
 
-""" Методы создания и обновления заказа для пользователей группы 'customer' """
-
+""" Методы управления заказами """
 def is_customer(user):
     """Проверка, является ли пользователь членом группы 'customer'."""
     return user.groups.filter(name='customer').exists()
 
+def order_belongs_to_user(view_func):
+    """Декоратор для проверки, принадлежит ли заказ пользователю."""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        order_id = kwargs.get('order_id')
+        if order_id is not None:
+            order = get_object_or_404(Order, id=order_id)
+            if order.user != request.user:
+                return HttpResponseForbidden("Вы не можете редактировать этот заказ.")
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
-# Метод для добавления товара в корзину
-@login_required(login_url='page_errors')
-@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
-def add_product_to_order(request, product_id):
-    """Добавляет товар в текущий заказ (в сессию)."""
-    try:
-        product = get_object_or_404(Product, id=product_id)
+def customer_required(view_func):
+    """Объединенный декоратор для проверки авторизации и принадлежности к группе."""
+    @login_required(login_url='page_errors')
+    @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+    @order_belongs_to_user
+    def _wrapped_view(request, *args, **kwargs):
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
-        # Логирование перед изменением сессии
-        logger.debug(f"Состояние сессии перед добавлением: {request.session.items()}")
+# Методы для управления корзиной
 
-        if 'order_key' not in request.session:
-            order_key = f"{request.user.id}_{datetime.datetime.now().timestamp()}"
-            request.session['order_key'] = order_key
-            request.session['order_items'] = {}
-
-        order_items = request.session['order_items']
-        order_items[str(product_id)] = order_items.get(str(product_id), 0) + 1
-        request.session.modified = True
-
-        logger.debug(f"Состояние сессии после добавления: {request.session.items()}")
-        messages.success(request, f'{product.name} добавлен в заказ.')
-    except Product.DoesNotExist:
-        logger.error(f"Продукт с id {product_id} не найден.")
-        messages.error(request, 'Товар не найден.')
-    except Exception as e:
-        logger.error(f"Ошибка при добавлении продукта в заказ: {e}")
-        messages.error(request, 'Произошла ошибка при добавлении товара в заказ.')
-
-    return redirect('main_page')
-
-
-@login_required(login_url='page_errors')
-@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
-@require_POST
-def update_cart(request):
-    """Обновляет содержимое корзины. Удаляет одну из позиций, очищает всю корзину или обновляет количество товара.
-
-    Args:
-        request: HTTP запрос.
-
-    Returns:
-        JsonResponse: JSON с обновленным содержимым корзины.
+@customer_required
+def add_to_cart(request, product_id):
     """
-    action = request.POST.get('action')
-    product_id = request.POST.get('product_id')
-    order_items = request.session.get('order_items', {})
+    Добавляет товар в корзину.
+    Если товар уже в корзине, увеличивает количество.
+    """
+    product = get_object_or_404(Product, id=product_id)
 
-    if action == 'remove' and product_id:
-        # Удаляем конкретный элемент из корзины
-        if str(product_id) in order_items:
-            del order_items[str(product_id)]
-            request.session['order_items'] = order_items
+    # Используем сессию для временного хранения данных корзины
+    cart = request.session.get('cart', {})
+    if str(product_id) in cart:
+        cart[str(product_id)]['quantity'] += 1
+    else:
+        cart[str(product_id)] = {'quantity': 1, 'product_name': product.name, 'price': product.price}
 
-    elif action == 'clear':
-        # Очищаем всю корзину
-        request.session.pop('order_items', None)
+    # Обновляем данные в сессии
+    request.session['cart'] = cart
 
-    elif action == 'update_quantity' and product_id:
-        quantity = int(request.POST.get('quantity', 0))
-        # Обновляем количество товара, если оно больше нуля, иначе удаляем
-        if quantity > 0:
-            order_items[str(product_id)] = quantity
-        else:
-            order_items.pop(str(product_id), None)
-        request.session['order_items'] = order_items
-
-    # Пересчитываем итоговую стоимость
-    new_total_price = calculate_new_total_price(request)
-    return JsonResponse({'new_total_price': new_total_price})
-
-def calculate_new_total_price(request):
-    order_items = request.session.get('order_items', {})
-    product_ids = order_items.keys()
-    products = Product.objects.filter(id__in=product_ids)
-    total_price = sum(product.price * order_items[str(product.id)] for product in products)
-    return total_price
+    return redirect('cart_detail')
 
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
-def order_form(request):
+@customer_required
+def remove_from_cart(request, product_id):
+    """
+    Удаляет товар из корзины.
+    """
+    cart = request.session.get('cart', {})
+    if str(product_id) in cart:
+        del cart[str(product_id)]
+
+    request.session['cart'] = cart
+    return redirect('cart_detail')
+
+
+@customer_required
+def clear_cart(request):
+    """Очищает временные данные корзины из сессии."""
+    if 'cart' in request.session:
+        del request.session['cart']
+    return redirect('cart_detail')
+
+
+@customer_required
+def cart_detail(request):
+    """
+    Отображает содержимое корзины и общую сумму.
+    """
+    cart = request.session.get('cart', {})
+    total_amount = sum(item['price'] * item['quantity'] for item in cart.values())
+
+    return render(request, 'cart_detail.html', {'cart': cart, 'total_amount': total_amount})
+
+
+# Методы создания заказа и работы с сессией
+
+@customer_required
+def create_order(request):
+    """
+    Создает заказ на основе содержимого корзины.
+    После создания очищает корзину.
+    """
     if request.method == 'POST':
-        return handle_post_request(request)
-    else:
-        return handle_get_request(request)
+        # Создаем новый заказ на основе данных из сессии
+        cart = request.session.get('cart', {})
+        if not cart:
+            return redirect('cart_detail')
+
+        order = Order.objects.create(user=request.user, status=Order.STATUS_CONFIRMED, status_datetime=timezone.now())
+        for product_id, item in cart.items():
+            product = get_object_or_404(Product, id=product_id)
+            OrderItem.objects.create(order=order, product=product, quantity=item['quantity'])
+
+        # После создания заказа очищаем временные данные корзины
+        del request.session['cart']
+        return redirect('purchase')
+
+    return redirect('cart_detail')
+
+# Методы редактирования заказа
+
+@customer_required
+def edit_order(request, order_id):
+    """
+    Создает временный заказ для редактирования.
+    Копирует товары из оригинального заказа и помещает их в корзину.
+    """
+    original_order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Создаем временный заказ
+    temporary_order, created = Order.objects.get_or_create(
+        user=request.user,
+        original_order=original_order,
+        status=Order.STATUS_PENDING
+    )
+
+    if created:
+        # Копируем товары из оригинального заказа в временный
+        for item in original_order.orderitem_set.all():
+            OrderItem.objects.create(order=temporary_order, product=item.product, quantity=item.quantity)
+
+    # Переносим товары из временного заказа в сессию для редактирования
+    cart = {}
+    for item in temporary_order.orderitem_set.all():
+        cart[str(item.product.id)] = {'quantity': item.quantity, 'product_name': item.product.name, 'price': item.product.price}
+    request.session['cart'] = cart
+
+    return redirect('edit_order_detail', order_id=temporary_order.id)
+
+# Управление состоянием временного заказа.
+
+@customer_required
+def edit_order_detail(request, order_id):
+    """
+    Позволяет пользователю просмотреть и подтвердить изменения во временном заказе.
+    """
+    temporary_order = get_object_or_404(Order, id=order_id, user=request.user, status=Order.STATUS_PENDING)
+
+    if request.method == 'POST':
+        if 'confirm' in request.POST:
+            return redirect('confirm_order_changes', order_id=temporary_order.id)
+        elif 'cancel' in request.POST:
+            temporary_order.delete()
+            return redirect('purchase')
+
+    # Получаем данные корзины из сессии для отображения
+    cart = request.session.get('cart', {})
+    total_amount = sum(item['price'] * item['quantity'] for item in cart.values())
+
+    return render(request, 'cart_detail.html', {'cart': cart, 'total_amount': total_amount})
+
+# Представление для проверки доступности продукта в корзине
+# Требуется создать функционал для управления запасами и остатками.
+# Сейчас просто предполагается, что все product_id в статусе active доступны для продажи.
+# @login_required
+# def check_product_availability(request, product_id):
+#     product = get_object_or_404(Product, id=product_id)
+#     # Логика проверки доступности
+#     is_available = product.stock > 0
+#     return JsonResponse({'is_available': is_available})
+
+@customer_required
+def confirm_order_changes(request, order_id):
+    """
+    Подтверждает изменения во временном заказе и переносит их в оригинальный
+    """
+    temporary_order = get_object_or_404(Order, id=order_id, user=request.user, status=Order.STATUS_PENDING)
+    original_order = temporary_order.original_order
+
+    # Начинаем транзакцию
+    with transaction.atomic():
+        # Обновляем оригинальный заказ
+        original_order.orderitem_set.all().delete()
+        cart = request.session.get('cart', {})
+        for product_id, item in cart.items():
+            product = get_object_or_404(Product, id=product_id)
+            OrderItem.objects.create(order=original_order, product=product, quantity=item['quantity'])
+
+        original_order.status = Order.STATUS_CONFIRMED
+        original_order.save()
+
+        # Удаляем временный заказ и очищаем корзину
+        temporary_order.delete()
+        if 'cart' in request.session:
+            del request.session['cart']
+
+    return redirect('purchase')
+
+@customer_required
+def cancel_order(request, order_id):
+    """
+    Отменяет заказ
+    """
+    # Получаем заказ пользователя с определенным ID и проверяем его статус
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    if order.status == Order.STATUS_CONFIRMED:
+        # Начинаем транзакцию
+        with transaction.atomic():
+            order.status = Order.STATUS_CANCELED
+            order.status_datetime = timezone.now()
+            order.save()
+
+    return redirect('purchase')
+
+def calculate_total_amount(order):
+    return sum(item.product.price * item.quantity for item in order.orderitem_set.all())
 
 
-def handle_post_request(request):
-    order_items = request.session.get('order_items', {})
-    form = OrderForm(request.POST)
-
-    products_with_quantities = []
-    for product_id, quantity in order_items.items():
-        product = get_object_or_404(Product, id=product_id)
-        products_with_quantities.append({'product': product, 'quantity': quantity})
-
-    if form.is_valid() and order_items:
-        try:
-            with transaction.atomic():
-                order = form.save(commit=False)
-                order.user = request.user
-                order.save()
-
-                for product_id, quantity in order_items.items():
-                    product = get_object_or_404(Product, id=product_id)
-                    OrderItem.objects.create(order=order, product=product, quantity=quantity)
-
-                clear_session(request)
-                messages.success(request, 'Ваш заказ успешно оформлен!')
-                return redirect('purchase')
-        except DatabaseError as db_error:
-            logger.error(f"Ошибка базы данных при подтверждении заказа: {db_error}")
-            messages.error(request, 'Произошла ошибка при подтверждении заказа.')
-    else:
-        messages.error(request, 'Невозможно подтвердить пустой заказ или данные формы некорректны.')
-
-    return render_order_form(request, form, products_with_quantities)
-
-
-def handle_get_request(request):
-    order_items = request.session.get('order_items', {})
-    logger.debug(f"Order items in session: {order_items}")
-    form = OrderForm()
-
-    products_with_quantities = []
-    for product_id, quantity in order_items.items():
-        product = get_object_or_404(Product, id=product_id)
-        products_with_quantities.append({'product': product, 'quantity': quantity})
-
-    # Логирование для проверки извлеченных данных
-    logger.debug(f"Products with quantities: {products_with_quantities}")
-
-    if not products_with_quantities:
-        messages.info(request, 'Ваша корзина пуста. Пожалуйста, добавьте товары.')
-
-    return render_order_form(request, form, products_with_quantities)
-
-def clear_session(request):
-    request.session.pop('order_items', None)
-    request.session.pop('order_key', None)
-    request.session.modified = True
-
-def render_order_form(request, form, products_with_quantities):
-    return render(request, 'business_app/order_form.html', {
-        'form': form,
-        'products_with_quantities': products_with_quantities
-    })
-
-
-@login_required(login_url='page_errors')
-@user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+@customer_required
 def purchase(request):
     """
-    - Обработка AJAX-запроса для отмены заказа, включая проверку возможности отмены.
-    - Получение и отображение текущих и прошлых заказов.
-    - Генерация уникального ключа заказа для сессии.
-    - Обработка повторных заказов на основе существующих данных.
-
-    Args:
-        request: Объект HTTP-запроса.
-
-    Returns:
-        JsonResponse: JSON-ответ для AJAX-запросов, указывающий на успешность или неудачу.
-        HttpResponse: Отрендеренная HTML-страница с информацией о заказах для обычных GET-запросов.
-
-    Raises:
-        Exception: Общая обработка исключений для неожиданных ошибок.
+    Отображает список заказов пользователя
     """
-    try:
-        # Проверка, является ли запрос POST и выполнен ли он через AJAX.
-        if request.method == 'POST' and request.is_ajax():
-            # Проверка, является ли запрос запросом на отмену заказа.
-            if 'cancel_order' in request.POST:
-                order_id = request.POST.get('order_id')
-                # Получение заказа, который соответствует критериям.
-                order = Order.objects.filter(
-                    id=order_id, user=request.user, status=Order.STATUS_CONFIRMED
-                ).first()
-                # Если заказ существует и может быть отменен в течение 30 минут.
-                if order and (timezone.now() - order.updated_at) < timedelta(minutes=30):
-                    order.status = Order.STATUS_CANCELED
-                    order.save()
-                    logger.info(f"Заказ {order_id} был успешно отменен пользователем {request.user}.")
-                    return JsonResponse({'success': True, 'message': 'Ваш заказ был успешно отменен.'})
-                else:
-                    logger.warning(f"Попытка отмены заказа {order_id} пользователем {request.user} не удалась.")
-                    return JsonResponse({'success': False, 'message': 'Заказ не может быть отменен.'})
+    # Получаем заказы пользователя и фильтруем по статусу
+    pending_orders = Order.objects.filter(user=request.user, status=Order.STATUS_PENDING)
+    confirmed_orders = Order.objects.filter(user=request.user, status=Order.STATUS_CONFIRMED)
+    delivered_orders = Order.objects.filter(user=request.user, status=Order.STATUS_DELIVERY)
+    canceled_orders = Order.objects.filter(user=request.user, status=Order.STATUS_CANCELED)
+    completed_orders = Order.objects.filter(user=request.user, status=Order.STATUS_COMPLETED)
 
-        # Получение текущего подтвержденного заказа для отображения.
-        current_order = Order.objects.filter(
-            user=request.user, status=Order.STATUS_CONFIRMED
-        ).select_related('user').first()
-        logger.debug(f"Текущий подтвержденный заказ: {current_order}")
-
-        # Получение других типов заказов для отображения на странице.
-        delivered_orders = Order.objects.filter(
-            user=request.user, status=Order.STATUS_DELIVERED
-        ).select_related('user')
-        completed_orders = Order.objects.filter(
-            user=request.user, status=Order.STATUS_COMPLETED
-        ).select_related('user')
-        canceled_orders = Order.objects.filter(
-            user=request.user, status=Order.STATUS_CANCELED
-        ).select_related('user')
-
-        # Генерация уникального ключа заказа для сессии, если он ещё не был создан.
-        if not request.session.get('order_key'):
-            request.session['order_key'] = str(uuid.uuid4())
-            logger.debug(f"Сгенерирован новый уникальный ключ заказа: {request.session['order_key']}")
-
-        # Обработка запроса на повторение предыдущего заказа.
-        repeat_order_id = request.GET.get('repeat')
-        if repeat_order_id:
-            repeat_order = Order.objects.filter(
-                id=repeat_order_id, user=request.user
-            ).prefetch_related('items').first()
-            if repeat_order:
-                request.session['repeat_order_data'] = {
-                    'items': [
-                        {'product_id': item.product.id, 'quantity': item.quantity, 'price': item.price}
-                        for item in repeat_order.items.all()
-                    ]
-                }
-                messages.success(request, 'Вы можете повторить заказ. Отредактируйте данные при необходимости.')
-                logger.info(f"Пользователь {request.user} запланировал повторение заказа {repeat_order_id}.")
-                return redirect('order_form')
-
-        # Компиляция заказов в словарь и добавление в контекст для рендеринга.
-        orders = {
-            'current_order': current_order,
-            'delivered_orders': delivered_orders,
-            'completed_orders': completed_orders,
-            'canceled_orders': canceled_orders,
-        }
-
-        context = {
-            'orders': orders
-        }
-
-    except Exception as e:
-        logger.error(f"Ошибка при управлении заказами: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'message': 'Произошла ошибка при обработке ваших заказов.'})
-
-    return render(request, 'business_app/purchase.html', context)
+    return render(request, 'purchase.html', {
+        'pending_orders': pending_orders,
+        'confirmed_orders': confirmed_orders,
+        'delivered_orders': delivered_orders,
+        'canceled_orders': canceled_orders,
+        'completed_orders': completed_orders
+    })
 
 
 """ Методы работы с продавцами управления продуктами каталога и статистикой продаж """

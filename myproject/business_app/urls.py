@@ -12,10 +12,21 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path("update_profile/", views.update_profile, name="update_profile"),
 
-    path('purchase/', views.purchase, name='purchase'),  # Страница "Мои покупки", интерфейс покупателя
-    path('order_form/', views.order_form, name='order_form'),  # Форма заказа и корзина
-    path('add_product_to_order/<int:product_id>/', views.add_product_to_order, name='add_product_to_order'),  # Маршрут для добавления продукта в заказ
-    path('update_cart/', views.update_cart, name='update_cart'),  # Маршрут для обновления корзины
+    path('purchase/', views.purchase, name='purchase'),  # Страница "Мои покупки", отображает заказы пользователя,
+    # разделяя их по статусам (ожидающие, подтверждённые, доставленные, отменённые и завершённые).
+    path('add_to_cart/<int:product_id>/', views.add_to_cart, name='add_to_cart'),  # Маршрут для добавления продукта в корзину
+    path('remove_from_cart/<int:product_id>/', views.remove_from_cart, name='remove_from_cart'),  # Маршрут для удаления продукта из корзины
+    path('clear_cart/', views.clear_cart, name='clear_cart'),  # Маршрут для очистки корзины
+    path('cart_detail/', views.cart_detail, name='cart_detail'),  # Маршрут к шаблону корзины
+    path('create_order/', views.create_order, name='create_order'),  # Маршрут Создаёт новый заказ на основе содержимого корзины и очищает
+    # корзину после подтверждения заказа.
+    path('edit_order/<int:order_id>/', views.edit_order, name='edit_order'),  # Маршрут для создания временного заказа
+    # для редактирования существующего заказа пользователем
+    path('edit_order_detail/<int:order_id>/', views.edit_order_detail, name='edit_order_detail'),  # Маршрут отображает страницу
+    # редактирования временного заказа и предоставляет возможность подтвердить или отменить изменения.
+    path('confirm_order_changes/<int:order_id>/', views.confirm_order_changes, name='confirm_order_changes'),  # Маршрут Подтверждает изменения
+    # временного заказа, обновляет оригинальный заказ и удаляет временный заказ.
+    path('cancel_order/<int:order_id>/', views.cancel_order, name='cancel_order'),  # Маршрут отменяет заказ, если он был подтверждён
 
     path('sale/', views.sale, name='sale'),  # Страница "Мои продажи", интерфейс продавца
     path('products/', views.product_list, name='product_list'),  # Маршрут к шаблону продукта

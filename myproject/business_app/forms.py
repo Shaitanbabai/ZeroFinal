@@ -3,8 +3,8 @@ from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserChangeForm
-from django.forms import inlineformset_factory
-from .models import Order, OrderItem
+# from django.forms import inlineformset_factory
+from .models import Order  # OrderItem
 from .models import Product
 import logging
 
@@ -113,14 +113,12 @@ class CreateProductForm(forms.ModelForm):
 Класс OrderForm используется для создания заказа. 
 Задаются параметры, которые будут использоваться в форме и структура таблицы с заказами
 """
-class OrderForm(forms.ModelForm):
+class CartForm(forms.ModelForm):
     class Meta:
         model = Order
-        fields = ['phone', 'address', 'comment']
-
-OrderItemFormSet = inlineformset_factory(
-    Order, OrderItem,
-    fields=['product', 'quantity', 'price'],
-    extra=1,
-    can_delete=True
-)
+        fields = ['phone', 'address', 'comment', 'telegram_key']
+        widgets = {
+            'phone': forms.TextInput(attrs={'placeholder': '+71234567890', 'required':True}),
+            'address': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Город, Улица, Дом, Подъезд, Квартира/Офис', 'required':True}),
+            'comment': forms.Textarea(attrs={'maxlength': 120, 'required': False}),
+        }
