@@ -11,7 +11,7 @@ from django.contrib.auth import (authenticate, get_backends, get_permission_code
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.contrib.auth.models import Group
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
 # Импорт для кастомной формы авторизации
 from allauth.account.views import email
@@ -20,11 +20,12 @@ from .forms import UpdateProfileForm
 
 # Импорты рендеринга шаблонов
 from django.core.paginator import Paginator
-from django.http import Http404
+from django.http import Http404, HttpResponseServerError
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.views import View
 
+from .logger import log_error
 # Импорты для создания и управления продуктом
 from .models import Product
 from .forms import CreateProductForm
@@ -38,7 +39,6 @@ from django.http import HttpResponse, HttpResponseForbidden
 from functools import wraps
 from .forms import CartForm
 from .models import Order, OrderItem
-
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -188,28 +188,55 @@ def logout_view(request):
 
 
 """ Методы управления заказами """
+
+
 def is_customer(user):
     """ Проверка, является ли пользователь членом группы 'customer'. """
-    return user.groups.filter(name='customer').exists()
+    try:
+        result = user.groups.filter(name='customer').exists()
+        logger.debug(f"Проверка is_customer для пользователя {user.username}: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Ошибка при проверке группы пользователя: {e}")
+        return False  # Здесь возврат False логичен, так как мы не можем подтвердить принадлежность к группе
 
 def order_belongs_to_user(view_func):
     """ Декоратор для проверки, принадлежит ли заказ пользователю. """
+
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         order_id = kwargs.get('order_id')
-        if order_id is not None:
-            order = get_object_or_404(Order, id=order_id)
-            if order.user != request.user:
-                return HttpResponseForbidden("Вы не можете редактировать этот заказ.")
+        try:
+            if order_id is not None:
+                order = get_object_or_404(Order, id=order_id)
+                logger.debug(f"Заказ с ID {order_id} найден для пользователя {request.user.username}")
+                if order.user != request.user:
+                    logger.warning(
+                        f"Пользователь {request.user.username} попытался получить доступ к чужому заказу с ID {order_id}")
+                    return HttpResponseForbidden("Вы не можете редактировать этот заказ.")
+        except ObjectDoesNotExist as e:
+            logger.error(f"Заказ с ID {order_id} не найден: {e}")
+            return HttpResponseForbidden("Заказ не найден.")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при проверке заказа: {e}")
+            return HttpResponseServerError("Произошла внутренняя ошибка сервера. Пожалуйста, повторите попытку позже.")
+
         return view_func(request, *args, **kwargs)
+
     return _wrapped_view
 
 def customer_required(view_func):
     """ Объединенный декоратор для проверки авторизации и принадлежности к группе. """
+
     @login_required(login_url='page_errors')
     @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
     def _wrapped_view(request, *args, **kwargs):
-        return view_func(request, *args, **kwargs)
+        try:
+            return view_func(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Ошибка в представлении {view_func.__name__}: {e}")
+            return HttpResponseServerError("Произошла внутренняя ошибка сервера. Пожалуйста, повторите попытку позже.")
+
     return _wrapped_view
 
 # Методы для управления корзиной
@@ -265,38 +292,43 @@ def cart_detail(request):
     """
     Отображает содержимое корзины и общую сумму.
     """
-    cart = request.session.get('cart', {})
-    total_amount = 0
-    items_with_products = []
+    try:
+        cart = request.session.get('cart', {})
+        total_amount = 0
+        items_with_products = []
 
-    for product_id, item in cart.items():
-        product = get_object_or_404(Product, id=product_id)
-        price = item.get('price', product.price)  # Используем цену из корзины или из объекта Product
-        quantity = item['quantity']
-        line_total = price * quantity
+        for product_id, item in cart.items():
+            product = get_object_or_404(Product, id=product_id)
+            price = item.get('price', product.price)  # Используем цену из корзины или из объекта Product
+            quantity = item['quantity']
+            line_total = price * quantity
 
-        item_with_product = {
-            'product': product,
-            'quantity': quantity,
-            'price': price,
-            'line_total': line_total  # Добавляем итоговую цену за количество
+            item_with_product = {
+                'product': product,
+                'quantity': quantity,
+                'price': price,
+                'line_total': line_total  # Добавляем итоговую цену за количество
+            }
+            items_with_products.append(item_with_product)
+            total_amount += line_total
+
+        # Создаём экземпляр формы
+        cart_form = CartForm()
+
+        # Передаём форму в контекст
+        context = {
+            'cart': items_with_products,
+            'total_amount': total_amount,
+            'cart_form': cart_form  # Добавляем форму в контекст
         }
-        items_with_products.append(item_with_product)
-        total_amount += line_total
 
-    # Создаём экземпляр формы
-    cart_form = CartForm()
+        logger.debug(f"Корзина пользователя {request.user.username}: {items_with_products}")
+        return render(request, 'business_app/cart_detail.html', context)
 
-    # Передаём форму в контекст
-    context = {
-        'cart': items_with_products,
-        'total_amount': total_amount,
-        'cart_form': cart_form  # Добавляем форму в контекст
-    }
+    except Exception as e:
+        logger.error(f"Ошибка при отображении корзины для пользователя {request.user.username}: {e}")
+        return HttpResponseForbidden("Произошла ошибка при обработке вашего запроса.")
 
-    return render(request, 'business_app/cart_detail.html', context)
-
-# Методы создания заказа и работы с сессией
 
 @customer_required
 def create_order(request):
@@ -304,24 +336,38 @@ def create_order(request):
     Создает заказ на основе содержимого корзины.
     После создания очищает корзину.
     """
-    if request.method == 'POST':
-        # Создаем новый заказ на основе данных из сессии
-        cart = request.session.get('cart', {})
-        if not cart:
-            return redirect('cart_detail')
+    try:
+        if request.method == 'POST':
+            # Создаем новый заказ на основе данных из сессии
+            cart = request.session.get('cart', {})
+            if not cart:
+                logger.info(f"Пустая корзина для пользователя {request.user.username} при создании заказа.")
+                return redirect('cart_detail')
 
-        order = Order.objects.create(user=request.user, status=Order.STATUS_CONFIRMED, status_datetime=timezone.now())
-        for product_id, item in cart.items():
-            product = get_object_or_404(Product, id=product_id)
-            OrderItem.objects.create(order=order, product=product, quantity=item['quantity'])
+            order = Order.objects.create(user=request.user, status=Order.STATUS_CONFIRMED,
+                                         status_datetime=timezone.now())
+            logger.debug(f"Создан новый заказ {order.id} для пользователя {request.user.username}")
 
-        # После создания заказа очищаем временные данные корзины
-        if 'cart' in request.session:
-            del request.session['cart']
+            for product_id, item in cart.items():
+                product = get_object_or_404(Product, id=product_id)
+                OrderItem.objects.create(order=order, product=product, quantity=item['quantity'])
+                logger.debug(f"Добавлен продукт {product_id} в заказ {order.id}")
 
-        return redirect('purchase')
+            # После создания заказа очищаем временные данные корзины
+            if 'cart' in request.session:
+                del request.session['cart']
+                logger.debug(f"Корзина очищена для пользователя {request.user.username}")
 
-    return redirect('cart_detail')
+            return redirect('purchase')
+
+        return redirect('cart_detail')
+
+    except Exception as e:
+        # Логирование ошибки
+        logger.error(f"Ошибка при создании заказа для пользователя {request.user.username}: {e}")
+
+        # Возврат ответа об ошибке сервера
+        return HttpResponseServerError("Произошла внутренняя ошибка сервера. Пожалуйста, повторите попытку позже.")
 
 # Методы редактирования заказа
 
@@ -353,8 +399,8 @@ def edit_order(request, order_id):
 
     return redirect('edit_order_detail', order_id=temporary_order.id)
 
-# Управление состоянием временного заказа.
 
+# Управление состоянием временного заказа.
 @customer_required
 def edit_order_detail(request, order_id):
     """
@@ -390,28 +436,41 @@ def confirm_order_changes(request, order_id):
     """
     Подтверждает изменения во временном заказе и переносит их в оригинальный
     """
-    temporary_order = get_object_or_404(Order, id=order_id, user=request.user, status=Order.STATUS_PENDING)
-    original_order = temporary_order.original_order
+    try:
+        temporary_order = get_object_or_404(Order, id=order_id, user=request.user, status=Order.STATUS_PENDING)
+        original_order = temporary_order.original_order
 
-    # Начинаем транзакцию
-    with transaction.atomic():
-        # Обновляем оригинальный заказ
-        original_order.orderitem_set.all().delete()
-        cart = request.session.get('cart', {})
-        for product_id, item in cart.items():
-            product = get_object_or_404(Product, id=product_id)
-            OrderItem.objects.create(order=original_order, product=product, quantity=item['quantity'])
+        logger.debug(f"Найден временный заказ {temporary_order.id} для пользователя {request.user.username}")
 
-        original_order.status = Order.STATUS_CONFIRMED
-        original_order.save()
+        # Начинаем транзакцию
+        with transaction.atomic():
+            # Обновляем оригинальный заказ
+            original_order.orderitem_set.all().delete()
+            logger.debug(f"Все позиции из оригинального заказа {original_order.id} удалены")
 
-        # Удаляем временный заказ и очищаем корзину
-        temporary_order.delete()
-        if 'cart' in request.session:
-            del request.session['cart']
+            cart = request.session.get('cart', {})
+            for product_id, item in cart.items():
+                product = get_object_or_404(Product, id=product_id)
+                OrderItem.objects.create(order=original_order, product=product, quantity=item['quantity'])
+                logger.debug(f"Добавлен продукт {product_id} в оригинальный заказ {original_order.id}")
 
-    return redirect('purchase')
+            original_order.status = Order.STATUS_CONFIRMED
+            original_order.save()
+            logger.debug(f"Статус оригинального заказа {original_order.id} обновлен на {Order.STATUS_CONFIRMED}")
 
+            # Удаляем временный заказ и очищаем корзину
+            temporary_order.delete()
+            logger.debug(f"Временный заказ {temporary_order.id} удален")
+
+            if 'cart' in request.session:
+                del request.session['cart']
+                logger.debug(f"Корзина очищена для пользователя {request.user.username}")
+
+        return redirect('purchase')
+
+    except Exception as e:
+        logger.error(f"Ошибка при подтверждении изменений заказа {order_id} для пользователя {request.user.username}: {e}")
+        return HttpResponseForbidden("Произошла ошибка при обработке вашего запроса.")
 
 @customer_required
 def cancel_order(request, order_id):
@@ -438,30 +497,38 @@ def purchase(request):
     """
     Отображает список заказов пользователя, разделенных на текущие и исторические.
     """
-    # Получение группы пользователя для определения контекста
-    context = get_user_group_context(request.user)
+    try:
+        # Получение группы пользователя для определения контекста
+        context = get_user_group_context(request.user)
 
-    # Текущие заказы пользователя
-    current_orders = Order.objects.filter(
-        user=request.user,
-        status__in=[Order.STATUS_PENDING, Order.STATUS_CONFIRMED, Order.STATUS_DELIVERY]
-    )
+        # Текущие заказы пользователя
+        current_orders = Order.objects.filter(
+            user=request.user,
+            status__in=[Order.STATUS_PENDING, Order.STATUS_CONFIRMED, Order.STATUS_DELIVERY]
+        )
 
-    # Исторические заказы пользователя
-    historical_orders = Order.objects.filter(
-        user=request.user,
-        status__in=[Order.STATUS_COMPLETED, Order.STATUS_CANCELED]
-    )
+        # Исторические заказы пользователя
+        historical_orders = Order.objects.filter(
+            user=request.user,
+            status__in=[Order.STATUS_COMPLETED, Order.STATUS_CANCELED]
+        )
 
-    # Объединение контекста с заказами
-    context.update({
-        'current_orders': current_orders,
-        'historical_orders': historical_orders,
-        'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
-        'STATUS_PENDING': Order.STATUS_PENDING,
-    })
+        # Объединение контекста с заказами
+        context.update({
+            'current_orders': current_orders,
+            'historical_orders': historical_orders,
+            'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
+            'STATUS_PENDING': Order.STATUS_PENDING,
+        })
 
-    return render(request, 'business_app/purchase.html', context)
+        return render(request, 'business_app/purchase.html', context)
+
+    except Exception as e:
+        # Логирование ошибки
+        logger.error(f"Ошибка при обработке заказа для пользователя {request.user.id}: {str(e)}")
+
+        # Возврат ответа об ошибке сервера
+        return HttpResponseServerError("Произошла внутренняя ошибка сервера. Пожалуйста, повторите попытку позже.")
 
 """ Методы работы с продавцами управления продуктами каталога и статистикой продаж """
 
@@ -612,9 +679,18 @@ def handle_permission_denied_or_not_found(request, exception=None):
         if isinstance(exception, PermissionDenied):
             error_message = "У вас нет прав для доступа к этой странице."
             status_code = 403
+            log_error(f"Ошибка доступа (403): {str(exception)}")
         elif isinstance(exception, Http404):
             error_message = "Страница не найдена."
             status_code = 404
+            log_error(f"Страница не найдена (404): {str(exception)}")
+        else:
+            # Логирование всех других исключений, которые могут привести к ошибке 500
+            log_error(f"Неизвестная ошибка: {str(exception)}")
+
+    else:
+        # Логирование случаев, когда exception не передан, но возникла ошибка
+        log_error("Ошибка 500: Неопределенная ошибка без переданного исключения.")
 
     context = {'error_message': error_message}
     return render(request, 'business_app/page_errors.html', context, status=status_code)

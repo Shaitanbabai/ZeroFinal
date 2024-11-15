@@ -23,7 +23,6 @@ from django.conf.urls.static import static
 from django.shortcuts import render
 from business_app.views import handle_permission_denied_or_not_found
 
-
 # Регистрация обработчиков ошибок
 handler403 = handle_permission_denied_or_not_found
 handler404 = handle_permission_denied_or_not_found
