@@ -20,6 +20,7 @@ urlpatterns = [
     path('cart_detail/', views.cart_detail, name='cart_detail'),  # Маршрут к шаблону корзины
     path('create_order/', views.create_order, name='create_order'),  # Маршрут Создаёт новый заказ на основе содержимого корзины и очищает
     # корзину после подтверждения заказа.
+    # path('order/create/', views.create_order, name='create_order'),
     path('edit_order/<int:order_id>/', views.edit_order, name='edit_order'),  # Маршрут для создания временного заказа
     # для редактирования существующего заказа пользователем
     path('edit_order_detail/<int:order_id>/', views.edit_order_detail, name='edit_order_detail'),  # Маршрут отображает страницу

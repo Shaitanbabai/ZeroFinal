@@ -1,72 +1,70 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">Корзина</h2>
-    
-    {% if cart.items %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th scope="col">Название</th>
-                    <th scope="col">Количество</th>
-                    <th scope="col">Цена</th>
-                    <th scope="col">Всего</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in cart.items %}
-                <tr>
-                    <td>{{ item.product.name }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.product.price }}</td>
-                    <td>{{ item.total_price }}</td>
-                </tr>
+<div class="container">
+    <div class="row">
+        <!-- Sidebar for navigation -->
+        <div class="col-md-3">
+            <div class="sidebar">
+                 <form method="post" action="{% url 'create_order' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Оформить заказ</button>
+                </form>
+                <button class="btn btn-secondary" onclick="window.location.href='{% url 'clear_cart' %}'">Сбросить всё</button>
+                <button class="btn btn-info" onclick="window.location.href='{% url 'main_page' %}'">Добавить товар</button>
+            </div>
+        </div>
+
+        <!-- Main content area for cart details -->
+        <div class="col-md-9">
+            <h2>Корзина</h2>
+
+            <!-- Cart items -->
+            <div class="cart-items">
+                {% for item in cart %}
+                    <div class="cart-item">
+                        <!-- Ссылка на карточку товара -->
+                        <a href="{% url 'product_detail' item.product.id %}">{{ item.product.name }}</a>
+
+                        <!-- Описание товара -->
+                        <p>{{ item.product.description }}</p>
+
+                        <!-- Превью изображения -->
+                        {% if item.product.image %}
+                            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" style="max-width: 100px;">
+                        {% endif %}
+
+                        <!-- Количество товара -->
+                        <span>Количество: {{ item.quantity }}</span>
+
+                        <!-- Цена за штуку -->
+                        <span>Цена за штуку: {{ item.price|floatformat:2 }}</span>
+
+                        <!-- Итоговая цена за количество -->
+                        <span>Итого: {{ item.line_total|floatformat:2 }}</span>
+
+                        <!-- Кнопки управления -->
+                        <button class="btn btn-sm btn-success" onclick="window.location.href='{% url 'add_to_cart' item.product.id %}'">Добавить</button>
+                        <button class="btn btn-sm btn-danger" onclick="window.location.href='{% url 'remove_from_cart' item.product.id %}'">Убрать</button>
+                    </div>
+                {% empty %}
+                    <p>Корзина пуста.</p>
                 {% endfor %}
-                <tr>
-                    <td colspan="3" class="text-right">Общая стоимость:</td>
-                    <td>{{ cart.total_price }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- Форма создания заказа -->
-        <form method="post" action="{% url 'create_order' %}">
-            {% csrf_token %}
-            {{ form.non_field_errors }}
-            
-            <div class="form-group">
-                {{ form.phone.label_tag }}
-                {{ form.phone }}
-                {{ form.phone.errors }}
             </div>
-            <div class="form-group">
-                {{ form.address.label_tag }}
-                {{ form.address }}
-                {{ form.address.errors }}
-            </div>
-            <div class="form-group">
-                {{ form.comment.label_tag }}
-                {{ form.comment }}
-                {{ form.comment.errors }}
-            </div>
-            <!-- Если telegram_key должен быть виден -->
-            <div class="form-group">
-                {{ form.telegram_key.label_tag }}
-                {{ form.telegram_key }}
-                {{ form.telegram_key.errors }}
+            <!-- Общая сумма -->
+            <div class="cart-total">
+                <strong>Общая сумма: {{ total_amount|floatformat:2 }}</strong>
             </div>
 
-            <button type="submit" class="btn btn-success">Оформить заказ</button>
-        </form>
-        
-        <!-- Очистить Корзину -->
-        <form method="post" action="{% url 'clear_cart' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Сбросить всё</button>
-        </form>
-    {% else %}
-        <p>Ваша корзина пуста.</p>
-    {% endif %}
+            <!-- Cart form for additional details -->
+            <form method="post">
+                {% csrf_token %}
+                {{ cart_form.as_p }}
+                <button type="submit" class="btn btn-primary">Обновить заказ</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

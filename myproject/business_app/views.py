@@ -39,6 +39,7 @@ from functools import wraps
 from .forms import CartForm
 from .models import Order, OrderItem
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -52,11 +53,16 @@ def get_user_group_context(user):
     }
     return context
 
+# def my_view(request):
+#     """ Метод отображения страницы покупки, если пользователь авторизован. """
+#     if request.user.is_authenticated:
+#         context = get_user_group_context(request.user)
+#         return render(request, 'business_app/purchase.html', context)
+#     else:
+#         return redirect('page_errors')
 
 def redirect_user_based_on_group(user):
-    """    Метод перенаправления пользователя на страницу, соответствующую группе допуска.
-    Если пользователь не авторизован, происходит перенаправление на главную страницу.
-    """
+    """ Метод перенаправления пользователя на страницу, соответствующую группе допуска. """
     if user.groups.filter(name='customer').exists():
         return redirect('purchase')
     elif user.groups.filter(name='salesman').exists():
@@ -183,11 +189,11 @@ def logout_view(request):
 
 """ Методы управления заказами """
 def is_customer(user):
-    """Проверка, является ли пользователь членом группы 'customer'."""
+    """ Проверка, является ли пользователь членом группы 'customer'. """
     return user.groups.filter(name='customer').exists()
 
 def order_belongs_to_user(view_func):
-    """Декоратор для проверки, принадлежит ли заказ пользователю."""
+    """ Декоратор для проверки, принадлежит ли заказ пользователю. """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         order_id = kwargs.get('order_id')
@@ -199,10 +205,9 @@ def order_belongs_to_user(view_func):
     return _wrapped_view
 
 def customer_required(view_func):
-    """Объединенный декоратор для проверки авторизации и принадлежности к группе."""
+    """ Объединенный декоратор для проверки авторизации и принадлежности к группе. """
     @login_required(login_url='page_errors')
     @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
-    @order_belongs_to_user
     def _wrapped_view(request, *args, **kwargs):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
@@ -222,7 +227,11 @@ def add_to_cart(request, product_id):
     if str(product_id) in cart:
         cart[str(product_id)]['quantity'] += 1
     else:
-        cart[str(product_id)] = {'quantity': 1, 'product_name': product.name, 'price': product.price}
+        cart[str(product_id)] = {
+            'quantity': 1,
+            'product_name': product.name,
+            'price': float(product.price)  # Конвертация в float
+        }
 
     # Обновляем данные в сессии
     request.session['cart'] = cart
@@ -257,10 +266,35 @@ def cart_detail(request):
     Отображает содержимое корзины и общую сумму.
     """
     cart = request.session.get('cart', {})
-    total_amount = sum(item['price'] * item['quantity'] for item in cart.values())
+    total_amount = 0
+    items_with_products = []
 
-    return render(request, 'cart_detail.html', {'cart': cart, 'total_amount': total_amount})
+    for product_id, item in cart.items():
+        product = get_object_or_404(Product, id=product_id)
+        price = item.get('price', product.price)  # Используем цену из корзины или из объекта Product
+        quantity = item['quantity']
+        line_total = price * quantity
 
+        item_with_product = {
+            'product': product,
+            'quantity': quantity,
+            'price': price,
+            'line_total': line_total  # Добавляем итоговую цену за количество
+        }
+        items_with_products.append(item_with_product)
+        total_amount += line_total
+
+    # Создаём экземпляр формы
+    cart_form = CartForm()
+
+    # Передаём форму в контекст
+    context = {
+        'cart': items_with_products,
+        'total_amount': total_amount,
+        'cart_form': cart_form  # Добавляем форму в контекст
+    }
+
+    return render(request, 'business_app/cart_detail.html', context)
 
 # Методы создания заказа и работы с сессией
 
@@ -282,7 +316,9 @@ def create_order(request):
             OrderItem.objects.create(order=order, product=product, quantity=item['quantity'])
 
         # После создания заказа очищаем временные данные корзины
-        del request.session['cart']
+        if 'cart' in request.session:
+            del request.session['cart']
+
         return redirect('purchase')
 
     return redirect('cart_detail')
@@ -337,7 +373,7 @@ def edit_order_detail(request, order_id):
     cart = request.session.get('cart', {})
     total_amount = sum(item['price'] * item['quantity'] for item in cart.values())
 
-    return render(request, 'cart_detail.html', {'cart': cart, 'total_amount': total_amount})
+    return render(request, 'business_app/cart_detail.html', {'cart': cart, 'total_amount': total_amount})
 
 # Представление для проверки доступности продукта в корзине
 # Требуется создать функционал для управления запасами и остатками.
@@ -376,6 +412,7 @@ def confirm_order_changes(request, order_id):
 
     return redirect('purchase')
 
+
 @customer_required
 def cancel_order(request, order_id):
     """
@@ -399,23 +436,32 @@ def calculate_total_amount(order):
 @customer_required
 def purchase(request):
     """
-    Отображает список заказов пользователя
+    Отображает список заказов пользователя, разделенных на текущие и исторические.
     """
-    # Получаем заказы пользователя и фильтруем по статусу
-    pending_orders = Order.objects.filter(user=request.user, status=Order.STATUS_PENDING)
-    confirmed_orders = Order.objects.filter(user=request.user, status=Order.STATUS_CONFIRMED)
-    delivered_orders = Order.objects.filter(user=request.user, status=Order.STATUS_DELIVERY)
-    canceled_orders = Order.objects.filter(user=request.user, status=Order.STATUS_CANCELED)
-    completed_orders = Order.objects.filter(user=request.user, status=Order.STATUS_COMPLETED)
+    # Получение группы пользователя для определения контекста
+    context = get_user_group_context(request.user)
 
-    return render(request, 'purchase.html', {
-        'pending_orders': pending_orders,
-        'confirmed_orders': confirmed_orders,
-        'delivered_orders': delivered_orders,
-        'canceled_orders': canceled_orders,
-        'completed_orders': completed_orders
+    # Текущие заказы пользователя
+    current_orders = Order.objects.filter(
+        user=request.user,
+        status__in=[Order.STATUS_PENDING, Order.STATUS_CONFIRMED, Order.STATUS_DELIVERY]
+    )
+
+    # Исторические заказы пользователя
+    historical_orders = Order.objects.filter(
+        user=request.user,
+        status__in=[Order.STATUS_COMPLETED, Order.STATUS_CANCELED]
+    )
+
+    # Объединение контекста с заказами
+    context.update({
+        'current_orders': current_orders,
+        'historical_orders': historical_orders,
+        'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
+        'STATUS_PENDING': Order.STATUS_PENDING,
     })
 
+    return render(request, 'business_app/purchase.html', context)
 
 """ Методы работы с продавцами управления продуктами каталога и статистикой продаж """
 

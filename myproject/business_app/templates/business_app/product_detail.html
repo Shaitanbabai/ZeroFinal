@@ -18,7 +18,7 @@
         <div class="list-group">
             {% if user.is_authenticated %}
                  {% if is_customer %}
-                    <form action="{% url 'order_form' %}" method="post">
+                    <form action="{% url 'add_to_cart' product.id %}" method="post">
                         {% csrf_token %}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <button type="submit" class="list-group-item list-group-item-action">Купить</button>
