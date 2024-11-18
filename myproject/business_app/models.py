@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 # from django.utils import timezone
 
+
 # Create your models here.
 class Product(models.Model):
     """
@@ -77,6 +78,7 @@ class Order(models.Model):
 
 
 class Review(models.Model):
+    objects = None
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     order_id = models.IntegerField()
     content = models.TextField(max_length=240)
@@ -88,7 +90,7 @@ class Review(models.Model):
 
 class Reply(models.Model):
     review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='replies')
-    content = models.TextField()
+    content = models.TextField(max_length=240)
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

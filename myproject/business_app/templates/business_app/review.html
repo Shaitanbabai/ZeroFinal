@@ -1,8 +1,70 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
 {% load static %}
 
 {% block content %}
+<div class="container mt-4">
+    <h1>Отзывы</h1>
 
+    <!-- Форма для добавления нового отзыва -->
+    <h2>Добавить отзыв</h2>
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="order_id">ID заказа:</label>
+            <input type="number" name="order_id" id="order_id" value="{{ order_id }}" readonly class="form-control">
+        </div>
 
+        <div class="form-group">
+            <label for="content">Текст отзыва:</label>
+            <textarea name="content" id="content" maxlength="240" required class="form-control"></textarea>
+        </div>
 
+        <div class="form-group">
+            <label for="rating">Рейтинг:</label>
+            <input type="number" name="rating" id="rating" min="1" max="5" required class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Отправить отзыв</button>
+    </form>
+
+    <!-- Отображение списка отзывов и их ответов -->
+    <h2>Список отзывов</h2>
+    {% for review in reviews %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h3 class="card-title">Отзыв от {{ review.user.username }} (ID заказа: {{ review.order_id }})</h3>
+                <p class="card-text">{{ review.content }}</p>
+                <p class="card-text"><small class="text-muted">Рейтинг: {{ review.rating }}</small></p>
+                <p class="card-text"><small class="text-muted">Дата публикации: {{ review.pub_date }}</small></p>
+
+                <!-- Удаление отзыва -->
+                <a href="{% url 'delete_review' review.id %}" class="btn btn-danger">Удалить отзыв</a>
+
+                <!-- Форма для добавления ответа на отзыв -->
+                <form method="post" action="{% url 'add_reply' review.id %}" class="mt-4">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="reply_content_{{ review.id }}">Ответ:</label>
+                        <textarea name="content" id="reply_content_{{ review.id }}" maxlength="240" required class="form-control"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Отправить ответ</button>
+                </form>
+
+                <!-- Отображение ответов на текущий отзыв -->
+                <h4 class="mt-3">Ответы:</h4>
+                {% for reply in review.replies.all %}
+                    <div class="border p-2 mb-2">
+                        <p>{{ reply.content }}</p>
+                        <p><small class="text-muted">Дата ответа: {{ reply.pub_date }}</small></p>
+                    </div>
+                {% empty %}
+                    <p>Нет ответов</p>
+                {% endfor %}
+            </div>
+        </div>
+    {% empty %}
+        <p>Нет отзывов</p>
+    {% endfor %}
+</div>
 {% endblock %}

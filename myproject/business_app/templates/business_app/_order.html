@@ -1,47 +1,47 @@
-<div class="order">
-  <div>
-    <p>
-      Заказ №{{ order.id }} |
-      Итоговая сумма: {{ order.total_amount }} |
-      Телефон: {{ order.phone }} |
-      Адрес: {{ order.address }} |
-      Комментарий: {{ order.comment }}
-    </p>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Название</th>
-        <th>Количество</th>
-        <th>Цена</th>
-        <th>Стоимость</th>
-        <th>Превью</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in order.orderitem_set.all %}
-        <tr>
-          <td>{{ item.product.name }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.product.price }}</td>
-          <td>{{ item.quantity|multiply:item.product.price }}</td>
-          <td>
-            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" width="50">
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% if show_buttons and (order.status == STATUS_CONFIRMED or order.status == STATUS_PENDING) %}
-    <div>
-      <form method="post" action="{% url 'edit_order' order.id %}" style="display: inline;">
-        {% csrf_token %}
-        <button type="submit" name="edit">Изменить</button>
-      </form>
-      <form method="post" action="{% url 'cancel_order' order.id %}" style="display: inline;">
-        {% csrf_token %}
-        <button type="submit" name="cancel">Отменить</button>
-      </form>
-    </div>
-  {% endif %}
-</div>
+ {# _order.html #}
+   <div class="list-group-item">
+       <div class="d-flex w-100 justify-content-between align-items-center">
+           <span>Заказ №{{ order.id }}</span>
+           <span><strong>Общая стоимость: {{ order.get_total_amount }}</strong></span>
+           <div>
+               {% if order.status == STATUS_PENDING or order.status == STATUS_CONFIRMED %}
+                   <form method="post" action="{% url 'edit_order' order.id %}" style="display:inline;">
+                       {% csrf_token %}
+                       <button type="submit" class="btn btn-primary btn-sm mx-1">Изменить</button>
+                   </form>
+                   <form method="post" action="{% url 'cancel_order' order.id %}" style="display:inline;">
+                       {% csrf_token %}
+                       <button type="submit" class="btn btn-danger btn-sm mx-1">Отменить</button>
+                   </form>
+               {% elif order.status == STATUS_COMPLETED or order.status == STATUS_CANCELED %}
+                   <button class="btn btn-success btn-sm mx-1">Повторить</button>
+                   {% if block_name == "historical_orders" %}
+                   <form method="post" action="{% url 'review' order.id %}" style="display:inline;">
+                       {% csrf_token %}
+                       <button type="submit" class="btn btn-secondary btn-sm mx-1">Отзыв</button>
+                   </form>
+                   {% else %}
+                   <button class="btn btn-secondary btn-sm mx-1">Отзыв</button>
+                   {% endif %}
+               {% endif %}
+           </div>
+       </div>
+       <div class="mt-2">
+           <p><strong>Телефон:</strong> {{ order.phone }}</p>
+           <p><strong>Адрес:</strong> {{ order.address }}</p>
+           <p><strong>Комментарий:</strong> {{ order.comment }}</p>
+       </div>
+       <ul class="list-group mt-2">
+           {% for item in order.orderitem_set.all %}
+               <li class="list-group-item d-flex justify-content-between align-items-center">
+                   <div class="d-flex align-items-center">
+                       <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px;">
+                       <div class="ml-3">
+                           <h6>{{ item.product.name }}</h6>
+                           <p>Цена: {{ item.product.price }} x {{ item.quantity }}</p>
+                       </div>
+                   </div>
+               </li>
+           {% endfor %}
+       </ul>
+   </div>

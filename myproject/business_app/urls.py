@@ -36,9 +36,12 @@ urlpatterns = [
     path('product/<int:product_id>/update/', views.update_product, name='update_product'),  # Маршрут для обновления продукта
     path('product/<int:product_id>/toggle_status/', views.toggle_product_status, name='toggle_product_status'),  # Маршрут для переключения статуса продукта
 
-    path("page_errors/", views.handle_permission_denied_or_not_found, name="page_errors"),
+    path("page_errors/", views.handle_permission_denied_or_not_found, name="page_errors"),  # Маршрут для обработки ошибок
 
-    path('review/', views.sale, name='review'),
+    path('review', views.review, name='review'),  # Маршрут для страницы отзывов
+    path('review/<int:order_id>/', views.review, name='review'),  # Маршрут для отзыва
+    path('reply/<int:order_id>/', views.reply_to_review, name='add_reply'),  # Маршрут для ответа на отзыв
+    path('review/delete/<int:review_id>/', views.delete_review, name='delete_review'),  # Маршрут для удаления отзыва
 
     # Добавьте другие URL-маршруты, необходимые для вашего приложения
 ]

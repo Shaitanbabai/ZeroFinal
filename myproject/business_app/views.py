@@ -2,6 +2,8 @@ import logging
 
 import datetime
 from datetime import timedelta
+
+from django.db.models import F
 from django.utils import timezone
 
 # Импорты админки, авторизации и разграничения доступа
@@ -20,7 +22,7 @@ from .forms import UpdateProfileForm
 
 # Импорты рендеринга шаблонов
 from django.core.paginator import Paginator
-from django.http import Http404, HttpResponseServerError
+from django.http import Http404, HttpResponseServerError, HttpResponseBadRequest
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.views import View
@@ -44,11 +46,13 @@ from .models import Order, OrderItem
 from .models import Review
 from .forms import ReviewForm, ReplyForm
 
-
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
+
 """ Блок классов управляющий авторизацией и регистрацией."""
+
+
 def get_user_group_context(user):
     """ Метод определения группы пользователя. """
     group_names = user.groups.values_list('name', flat=True)
@@ -66,6 +70,7 @@ def get_user_group_context(user):
 #     else:
 #         return redirect('page_errors')
 
+
 def redirect_user_based_on_group(user):
     """ Метод перенаправления пользователя на страницу, соответствующую группе допуска. """
     if user.groups.filter(name='customer').exists():
@@ -74,7 +79,6 @@ def redirect_user_based_on_group(user):
         return redirect('sale')
     else:
         return redirect('main_page')
-
 
 
 def main_page(request):
@@ -103,11 +107,11 @@ class AuthorizationView(View):
         form = CustomLoginForm(data=request.POST)
         if form.is_valid():
             # Получаем email и пароль
-            email = form.cleaned_data.get('email')  # Используем 'email'
+            user_email = form.cleaned_data.get('email')  # Используем 'email'
             password = form.cleaned_data.get('password')
 
             # Аутентификация пользователя по email и паролю
-            user = authenticate(request, email=email, password=password)
+            user = authenticate(request, email=user_email, password=password)
 
             if user is not None:
                 login(request, user)
@@ -145,6 +149,7 @@ class RegistrationView(View):
         else:
             return render(request, 'account/signup.html', {'form': form, 'errors': form.errors})
 
+
 def get_permission_for_action(action, model):
     """ Вспомогательная функция для получения полного имени разрешения для заданного действия и модели. """
     app_label = model._meta.app_label
@@ -153,6 +158,7 @@ def get_permission_for_action(action, model):
 
 
 """ Методы управления профилем пользователя """
+
 
 @login_required(login_url='page_errors')
 def profile(request):
@@ -192,21 +198,22 @@ def logout_view(request):
     logout(request)
     return redirect(reverse('main_page'))
 
+""" Методы проверки принадлежности и разграничения прав"""
 
-""" Методы управления заказами """
-def is_customer(user):
-    """ Проверка, является ли пользователь членом группы 'customer'. """
-    try:
-        result = user.groups.filter(name='customer').exists()
-        logger.debug(f"Проверка is_customer для пользователя {user.username}: {result}")
-        return result
-    except Exception as e:
-        logger.error(f"Ошибка при проверке группы пользователя: {e}")
-        return False  # Здесь возврат False логичен, так как мы не можем подтвердить принадлежность к группе
+def is_in_group(group_name):
+    """Функция для создания проверки принадлежности к группе."""
+    def check(user):
+        try:
+            result = user.groups.filter(name=group_name).exists()
+            logger.debug(f"Проверка принадлежности к группе '{group_name}' для пользователя {user.username}: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Ошибка при проверке группы пользователя: {e}")
+            return False
+    return check
 
 def order_belongs_to_user(view_func):
-    """ Декоратор для проверки, принадлежит ли заказ пользователю. """
-
+    """Декоратор для проверки, принадлежит ли заказ пользователю."""
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         order_id = kwargs.get('order_id')
@@ -215,35 +222,44 @@ def order_belongs_to_user(view_func):
                 order = get_object_or_404(Order, id=order_id)
                 logger.debug(f"Заказ с ID {order_id} найден для пользователя {request.user.username}")
                 if order.user != request.user:
-                    logger.warning(
-                        f"Пользователь {request.user.username} попытался получить доступ к чужому заказу с ID {order_id}")
+                    logger.warning(f"Пользователь {request.user.username} попытался получить доступ к чужому заказу с ID {order_id}")
                     return HttpResponseForbidden("Вы не можете редактировать этот заказ.")
-        except ObjectDoesNotExist as e:
-            logger.error(f"Заказ с ID {order_id} не найден: {e}")
-            return HttpResponseForbidden("Заказ не найден.")
         except Exception as e:
-            logger.error(f"Неожиданная ошибка при проверке заказа: {e}")
-            return HttpResponseServerError("Произошла внутренняя ошибка сервера в представлении order belongs to user.")
-
+            logger.error(f"Ошибка при проверке заказа: {e}")
+            return HttpResponseServerError("Произошла внутренняя ошибка сервера.")
         return view_func(request, *args, **kwargs)
-
     return _wrapped_view
 
-def customer_required(view_func):
-    """ Объединенный декоратор для проверки авторизации и принадлежности к группе. """
 
+def customer_required(view_func):
+    """Декоратор для проверки авторизации и принадлежности к группе 'customer'."""
     @login_required(login_url='page_errors')
-    @user_passes_test(is_customer, login_url='page_errors', redirect_field_name=None)
+    @user_passes_test(is_in_group('customer'), login_url='page_errors', redirect_field_name=None)
+    @order_belongs_to_user
     def _wrapped_view(request, *args, **kwargs):
         try:
             return view_func(request, *args, **kwargs)
         except Exception as e:
             logger.error(f"Ошибка в представлении {view_func.__name__}: {e}")
-            return HttpResponseServerError("Произошла внутренняя ошибка сервера в представлении customer required")
-
+            return HttpResponseServerError("Произошла внутренняя ошибка сервера.")
     return _wrapped_view
 
-# Методы для управления корзиной
+
+def salesman_required(view_func):
+    """Декоратор для проверки авторизации и принадлежности к группе 'salesman'."""
+    @login_required(login_url='page_errors')
+    @user_passes_test(is_in_group('salesman'), login_url='page_errors', redirect_field_name=None)
+    def _wrapped_view(request, *args, **kwargs):
+        try:
+            return view_func(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Ошибка в представлении {view_func.__name__}: {e}")
+            return HttpResponseServerError("Произошла внутренняя ошибка сервера.")
+    return _wrapped_view
+
+
+""" Методы для управления корзиной """
+
 
 @customer_required
 def add_to_cart(request, product_id):
@@ -536,8 +552,7 @@ def is_salesman (user):
 #     else:
 #         return redirect(reverse('main_page'))
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
+@salesman_required
 def sale(request):
     """
     Получение доступа к панели продавца,
@@ -547,8 +562,7 @@ def sale(request):
     return render(request, 'business_app/sale.html', context)
 
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
+@salesman_required
 def product_list(request):
     """
     Метод отображения списка продуктов. В качестве параметра передается список продуктов.
@@ -590,8 +604,6 @@ def product_list(request):
     return render(request, 'business_app/product_list.html', {'products': products, 'request': request})
 
 
-# @login_required(login_url='page_errors')
-# @user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
 def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -609,8 +621,7 @@ def product_detail(request, product_id):
     return render(request, 'business_app/product_detail.html', context)
 
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
+@salesman_required
 def create_product(request):
     if request.method == "POST":
         form = CreateProductForm(request.POST, request.FILES)
@@ -627,8 +638,7 @@ def create_product(request):
     return render(request,'business_app/create_product.html', {'form': form})
 
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
+@salesman_required
 def update_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     if request.method == "POST":
@@ -646,8 +656,7 @@ def update_product(request, product_id):
     return render(request, 'business_app/update_product.html', {'form': form, 'product': product})
 
 
-@login_required(login_url='page_errors')
-@user_passes_test(is_salesman, login_url='page_errors', redirect_field_name=None)
+@salesman_required
 def toggle_product_status(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     product.is_active = not product.is_active
@@ -656,13 +665,75 @@ def toggle_product_status(request, product_id):
     return redirect('product_list')
 
 
+""" Методы управления отзывами """
 
 
+@customer_required
+def review(request, order_id):
+    if request.method == 'POST':
+        # Проверка на существование отзыва
+        if Review.objects.filter(user=request.user, order_id=order_id).exists():
+            return render(request, 'business_app/review.html', {
+                'error': 'Вы уже оставили отзыв на этот заказ.',
+                'order_id': order_id,
+                'reviews': Review.objects.filter(order_id=order_id),
+                'review_form': ReviewForm()
+            })
 
-# @login_required(login_url='page_errors')
-# @permission_required(get_permission_for_action('change', Product), login_url='page_errors', raise_exception=True)
-# def update_product(request):
-#     return render(request, 'business_app/update_product.html')
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            local_review = form.save(commit=False)
+            local_review.user = request.user
+            local_review.order_id = order_id
+            local_review.save()
+            return redirect('review', order_id=order_id)
+        else:
+            return render(request, 'business_app/review.html', {
+                'review_form': form,
+                'order_id': order_id,
+                'error': 'Форма заполнена некорректно.'
+            })
+
+    reviews = Review.objects.filter(order_id=order_id).annotate(user_first_name=F('user__first_name'))
+    review_form = ReviewForm()
+    reply_form = ReplyForm()
+    context = {
+        'reviews': reviews,
+        'review_form': review_form,
+        'reply_form': reply_form,
+        'order_id': order_id
+    }
+    return render(request, 'business_app/review.html', context)
+
+
+@salesman_required
+def reply_to_review(request, order_id):
+    if request.method == 'POST':
+        review_id = request.POST.get('review_id')
+        if review_id:
+            target_review = get_object_or_404(Review, id=review_id)
+            form = ReplyForm(request.POST)
+            if form.is_valid():
+                reply = form.save(commit=False)
+                reply.review = target_review
+                reply.save()
+                return redirect('review', order_id=order_id)
+            else:
+                # Возвращает JSON с ошибками валидации
+                return JsonResponse({'error': 'Ответ не прошел проверку.', 'form_errors': form.errors}, status=400)
+        else:
+            # Если review_id не передан
+            return JsonResponse({'error': 'Не указан идентификатор отзыва.'}, status=400)
+    return JsonResponse({'error': 'Метод не разрешен.'}, status=403)
+
+
+@salesman_required
+def delete_review(request, review_id):
+    local_review = get_object_or_404(Review, id=review_id)
+    local_review.delete()
+    return redirect('review', order_id=local_review.order_id)
+
+
 def handle_permission_denied_or_not_found(request, exception=None):
     """
     Обработчик для ошибок доступа (403) и отсутствующих страниц (404).
