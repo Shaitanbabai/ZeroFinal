@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+# from django.utils import timezone
 
 # Create your models here.
 class Product(models.Model):
@@ -32,6 +33,7 @@ class OrderItem(models.Model):
 
 
 class Order(models.Model):
+    DoesNotExist = None
     objects = None
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
@@ -56,3 +58,41 @@ class Order(models.Model):
     telegram_key = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_CONFIRMED)
     status_datetime = models.DateTimeField(auto_now_add=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     def change_status(self, new_status):
+#         self.status = new_status
+#         self.status_datetime = timezone.now()
+#         self.save()
+#         OrderStatusHistory.objects.create(order=self, status=new_status, status_datetime=self.status_datetime)
+#
+# class OrderStatusHistory(models.Model):
+#     order = models.ForeignKey('Order', related_name='status_history', on_delete=models.CASCADE)
+#     status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
+#     status_datetime = models.DateTimeField(default=timezone.now)
+#
+#     def __str__(self):
+#         return f"{self.order.id} - {self.status} at {self.status_datetime}"
+
+
+class Review(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order_id = models.IntegerField()
+    content = models.TextField(max_length=240)
+    rating = models.IntegerField()
+    pub_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review by {self.user.username} for order {self.order_id}"
+
+class Reply(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='replies')
+    content = models.TextField()
+    pub_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Reply to review {self.review.id}"
+
+
+

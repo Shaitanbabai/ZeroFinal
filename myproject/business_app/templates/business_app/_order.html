@@ -1,0 +1,47 @@
+<div class="order">
+  <div>
+    <p>
+      Заказ №{{ order.id }} |
+      Итоговая сумма: {{ order.total_amount }} |
+      Телефон: {{ order.phone }} |
+      Адрес: {{ order.address }} |
+      Комментарий: {{ order.comment }}
+    </p>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Название</th>
+        <th>Количество</th>
+        <th>Цена</th>
+        <th>Стоимость</th>
+        <th>Превью</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in order.orderitem_set.all %}
+        <tr>
+          <td>{{ item.product.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.product.price }}</td>
+          <td>{{ item.quantity|multiply:item.product.price }}</td>
+          <td>
+            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" width="50">
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if show_buttons and (order.status == STATUS_CONFIRMED or order.status == STATUS_PENDING) %}
+    <div>
+      <form method="post" action="{% url 'edit_order' order.id %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" name="edit">Изменить</button>
+      </form>
+      <form method="post" action="{% url 'cancel_order' order.id %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" name="cancel">Отменить</button>
+      </form>
+    </div>
+  {% endif %}
+</div>

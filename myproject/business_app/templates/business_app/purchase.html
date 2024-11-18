@@ -1,69 +1,93 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends 'base.html' %}
+
+{% load bootstrap4 %}
 
 {% block content %}
-<!--  {% if user.is_authenticated and is_customer %}-->
-    <div class="container">
 
-      <!-- Боковая навигационная панель -->
-      <div class="sidebar">
-        <a href="{% url 'cart_detail' %}">Корзина</a>
-        <a href="{% url 'review' %}">Отзывы</a>
-      </div>
-
-      <!-- Основное содержимое страницы -->
-      <div class="main-content">
-            <h2>Текущие заказы</h2>
-
-            {% if current_orders %}
-              {% for order in current_orders %}
-                  <div class="order">
-                      <p>Заказ №{{ order.id }} - Статус: {{ order.get_status_display }}</p>
-                      <p>Продукты:</p>
-                      <ul>
-                          {% for item in order.orderitem_set.all %}
-                              <li>{{ item.product.name }} - {{ item.quantity }}</li>
-                          {% endfor %}
-                      </ul>
-                      {% if order.status == STATUS_CONFIRMED or order.status == STATUS_PENDING %}
-                          <form method="post" action="{% url 'edit_order' order.id %}">
-                              {% csrf_token %}
-                              <button type="submit" name="edit">Изменить</button>
-                          </form>
-                          <form method="post" action="{% url 'cancel_order' order.id %}">
-                              {% csrf_token %}
-                              <button type="submit" name="cancel">Отменить</button>
-                          </form>
-                      {% endif %}
-                  </div>
-              {% endfor %}
-          {% endif %}
-            {% else %}
-                <p>У вас нет текущих заказов.</p>
-            {% endif %}
-
-            <h2>История заказов</h2>
-
-            {% if historical_orders %}
-                {% for order in historical_orders %}
-                    <div class="order">
-                        <p>Заказ №{{ order.id }} - Статус: {{ order.get_status_display }}</p>
-                        <p>Продукты:</p>
-                        <ul>
-                            {% for item in order.orderitem_set.all %}
-                                <li>{{ item.product.name }} - {{ item.quantity }}</li>
-                            {% endfor %}
-                        </ul>
+<div class="container mt-4">
+    <h2>Текущие заказы</h2>
+    <div class="list-group mb-4">
+        {% for order in current_orders %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <span>Заказ №{{ order.id }}</span>
+                    <span>Общая стоимость: {{ order.get_total_amount }}</span>
+                    <div>
+                        {% if order.status == STATUS_PENDING or order.status == STATUS_CONFIRMED %}
+                        <form method="post" action="{% url 'edit_order' order.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-sm mx-1">Изменить</button>
+                        </form>
+                        <form method="post" action="{% url 'cancel_order' order.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm mx-1">Отменить</button>
+                        </form>
+                        {% elif order.status == STATUS_COMPLETED or order.status == STATUS_CANCELED %}
+                            <button class="btn btn-success btn-sm mx-1">Повторить</button>
+                            <button class="btn btn-secondary btn-sm mx-1">Отзыв</button>
+                        {% endif %}
                     </div>
-                {% endfor %}
-            {% else %}
-                <p>У вас нет завершенных или отмененных заказов.</p>
-            {% endif %}
-        </div>
+                </div>
+                <div class="mt-2">
+                    <p><strong>Телефон:</strong> {{ order.phone }}</p>
+                    <p><strong>Адрес:</strong> {{ order.address }}</p>
+                    <p><strong>Комментарий:</strong> {{ order.comment }}</p>
+                </div>
+                <ul class="list-group mt-2">
+                    {% for item in order.orderitem_set.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px;">
+                                <div class="ml-3">
+                                    <h6>{{ item.product.name }}</h6>
+                                    <p>Цена: {{ item.product.price }} x {{ item.quantity }}</p>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% empty %}
+            <p>Нет текущих заказов.</p>
+        {% endfor %}
     </div>
-
-    <script>
-      window.location.href = "{% url 'page_errors' %}";
-    </script>
-
+    <h2>Исторические заказы</h2>
+    <div class="list-group">
+        {% for order in historical_orders %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <span>Заказ №{{ order.id }}</span>
+                    <span>Общая стоимость: {{order.get_total_amount }}</span>
+                    <div>
+                        {% if order.status == STATUS_COMPLETED or order.status == STATUS_CANCELED %}
+                            <button class="btn btn-success btn-sm mx-1">Повторить</button>
+                            <button class="btn btn-secondary btn-sm mx-1">Отзыв</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <p><strong>Телефон:</strong> {{ order.phone }}</p>
+                    <p><strong>Адрес:</strong> {{ order.address }}</p>
+                    <p><strong>Комментарий:</strong> {{ order.comment }}</p>
+                </div>
+                <ul class="list-group mt-2">
+                    {% for item in order.orderitem_set.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px;">
+                                <div class="ml-3">
+                                    <h6>{{ item.product.name }}</h6>
+                                    <p>Цена: {{ item.product.price }} x {{ item.quantity }}</p>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% empty %}
+            <p>Нет исторических заказов.</p>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}
+

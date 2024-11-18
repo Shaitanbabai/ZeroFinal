@@ -7,9 +7,23 @@ register = template.Library()
 def add_class(field, css_class):
     return field.as_widget(attrs={"class": css_class})
 
+
 @register.filter
 def create_range(value):
     try:
         return range(int(value))
     except (TypeError, ValueError):
         return []
+
+
+@register.filter
+def multiply(value, arg):
+    try:
+        return value * arg
+    except (ValueError, TypeError):
+        return ''
+
+
+@register.filter
+def in_list(value, the_list):
+    return value in the_list

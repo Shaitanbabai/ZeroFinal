@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserChangeForm
+from .models import Review, Reply
 # from django.forms import inlineformset_factory
 from .models import Order  # OrderItem
 from .models import Product
@@ -122,3 +123,14 @@ class CartForm(forms.ModelForm):
             'address': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Город, Улица, Дом, Подъезд, Квартира/Офис', 'required':True}),
             'comment': forms.Textarea(attrs={'maxlength': 120, 'required': False}),
         }
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['content', 'rating']
+
+class ReplyForm(forms.ModelForm):
+    class Meta:
+        model = Reply
+        fields = ['content']
