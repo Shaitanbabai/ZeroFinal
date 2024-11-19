@@ -90,18 +90,18 @@ html, body {
 }
 
 .nav-button {
-    background-color: #28a745; /* Зеленый цвет */
-    color: #f7e7ce; /* Шампань */
-    border: none;
-    border-radius: 20px;
-    padding: 5px 15px;
-    text-decoration: none;
-    font-size: 16px;
-    transition: background-color 0.3s;
+    background-color: #28a745 !important; /* Зеленый цвет */
+    color: #f7e7ce !important; /* Шампань */
+    border: none !important;
+    border-radius: 20px !important;
+    padding: 5px 15px !important;
+    text-decoration: none !important;
+    font-size: 16px !important;
+    transition: background-color 0.3s !important;
 }
 
 .nav-button:hover {
-    background-color: #218838; /* Темнее при наведении */
+    background-color: #218838 !important; /* Темнее при наведении */
 }
 
 
@@ -235,3 +235,66 @@ html, body {
         margin-top: 20px;
     }
 </style>
+
+
+/* ==============================
+   Звездный рейтинг
+   ============================== */
+.starability-basic {
+  --star-size: 40px;
+  --star-color: #ddd;
+  --star-background: #ffb600;
+  display: inline-block;
+  font-family: "Starability", Arial, sans-serif;
+}
+
+.starability-basic label {
+  font-size: var(--star-size);
+  color: var(--star-color);
+  cursor: pointer;
+}
+
+.starability-basic input[type="radio"] {
+  display: none;
+}
+
+.starability-basic label::before {
+  content: '☆';
+  display: inline-block;
+  margin-right: 5px;
+  transition: color 0.2s ease-in-out;
+}
+
+.starability-basic input[type="radio"]:checked ~ label::before,
+.starability-basic input[type="radio"]:hover ~ label::before,
+.starability-basic label:hover ~ label::before {
+  color: var(--star-background);
+}
+
+.starability-result {
+  --star-size: 40px;
+  --star-color: #ddd;
+  --star-background: #ffb600;
+  display: inline-block;
+  font-size: var(--star-size);
+  font-family: "Starability", Arial, sans-serif;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.starability-result[data-rating]:before {
+  content: '★★★★★';
+  color: var(--star-color);
+}
+
+.starability-result[data-rating]::after {
+  content: '★★★★★';
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--star-background);
+  width: calc(var(--star-size) * attr(data-rating));
+}

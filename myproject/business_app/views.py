@@ -697,11 +697,16 @@ def review(request, order_id):
     reviews = Review.objects.filter(order_id=order_id).annotate(user_first_name=F('user__first_name'))
     review_form = ReviewForm()
     reply_form = ReplyForm()
+
+    # Проверка принадлежности пользователя к группе 'salesman'
+    is_reviewer_salesman = request.user.groups.filter(name='salesman').exists()
+
     context = {
         'reviews': reviews,
         'review_form': review_form,
         'reply_form': reply_form,
-        'order_id': order_id
+        'order_id': order_id,
+        'is_salesman': is_reviewer_salesman  # Добавляем результат проверки в контекст
     }
     return render(request, 'business_app/review.html', context)
 
