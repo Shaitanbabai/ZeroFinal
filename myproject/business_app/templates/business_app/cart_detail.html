@@ -3,17 +3,52 @@
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+    body {
+        color: #218838; /* Устанавливаем цвет текста */
+    }
+    h2 {
+        font-family: 'Dancing Script', cursive; /* Применяем шрифт к заголовкам */
+    }
+
+    }
+    .nav-button {
+        background-color: #28a745; /* Зеленый цвет */
+        color: #f7e7ce; /* Шампань */
+        border: none;
+        border-radius: 20px;
+        padding: 5px 15px;
+        text-decoration: none;
+        font-size: 16px;
+        transition: background-color 0.3s;
+        cursor: pointer;
+    }
+    .nav-button:hover {
+        background-color: #218838; /* Темнее при наведении */
+    }
+
+    .cart-total {
+        text-align: right; /* Выровняем итоговую сумму по правому краю */
+        margin-top: 20px;
+    }
+    .hidden {
+        display: none; /* Скрываем элемент */
+    }
+</style>
+
 <div class="container">
     <div class="row">
         <!-- Sidebar for navigation -->
         <div class="col-md-3">
-            <div class="sidebar">
-                 <form method="post" action="{% url 'create_order' %}">
+            <div class="sidebar navigation">
+                <form method="post" action="{% url 'create_order' %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-primary">Оформить заказ</button>
+                    <button type="submit" class="nav-button">Оформить заказ</button>
                 </form>
-                <button class="btn btn-secondary" onclick="window.location.href='{% url 'clear_cart' %}'">Сбросить всё</button>
-                <button class="btn btn-info" onclick="window.location.href='{% url 'main_page' %}'">Добавить товар</button>
+                <button class="nav-button" onclick="window.location.href='{% url 'clear_cart' %}'">Сбросить всё</button>
+                <button class="nav-button" onclick="window.location.href='{% url 'main_page' %}'">Добавить товар</button>
             </div>
         </div>
 
@@ -53,16 +88,35 @@
                     <p>Корзина пуста.</p>
                 {% endfor %}
             </div>
+
             <!-- Общая сумма -->
             <div class="cart-total">
                 <strong>Общая сумма: {{ total_amount|floatformat:2 }}</strong>
             </div>
 
             <!-- Cart form for additional details -->
-            <form method="post">
+            <form method="post" class="cart-form">
                 {% csrf_token %}
-                {{ cart_form.as_p }}
-                <button type="submit" class="btn btn-primary">Обновить заказ</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Телефон:</label>
+                        {{ cart_form.phone }}
+                    </div>
+                    <div class="form-group">
+                        <label>Telegram Key:</label>
+                        {{ cart_form.telegram_key }}
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Адрес:</label>
+                        {{ cart_form.address }}
+                    </div>
+                    <div class="form-group">
+                        <label>Комментарий:</label>
+                        {{ cart_form.comment }}
+                    </div>
+                </div>
             </form>
         </div>
     </div>

@@ -120,8 +120,7 @@ html, body {
   flex-direction: column; /* Вертикальное расположение элементов */
   margin-right: 20px; /* Расстояние до основного контента */
   padding: 15px; /* Внутренние отступы для более приятного внешнего вида */
-  background-color: #f8f9fa; /* Светлый фон для контраста с кнопками */
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Легкая тень для глубины */
+  background-color: #ffffff; /* Белый фон */
 }
 
 .main-content {
@@ -200,6 +199,51 @@ html, body {
 
 .form-control.wide-input {
     width: 200%; /* Увеличивает ширину вдвое */
+}
+
+
+/* ==============================
+   Стили для полей формы
+   ============================== */
+.cart-form .form-group {
+   display: flex;
+   flex-direction: column;
+   align-items: flex-start;
+   margin-bottom: 15px;
+   }
+
+ .cart-form label {
+   margin-bottom: 5px;
+   font-weight: bold;
+   }
+
+.form-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px; /* Для разделения строк */
+}
+
+.form-group {
+    flex: 1;
+    margin-right: 10px; /* Для разделения колонок */
+}
+
+.form-group:last-child {
+    margin-right: 0; /* Убираем отступ у последнего элемента в строке */
+}
+
+.form-field {
+  width: 100%; /* Поля ввода занимают всю доступную ширину контейнера */
+  max-width: 100ch; /* Ограничение ширины поля ввода до 120 символов (100ch) */
+  margin-bottom: 15px; /* Отступ снизу для разделения полей */
+  padding: 10px; /* Внутренние отступы для удобства ввода */
+  border: 1px solid #ced4da; /* Граница для визуального выделения */
+  border-radius: 4px; /* Скругленные углы */
+  box-sizing: border-box; /* Учитываем отступы и границу в ширине */
+}
+
+.main-content .form-field {
+  align-self: flex-start; /* Выровнять по левому краю основного контента */
 }
 
 
