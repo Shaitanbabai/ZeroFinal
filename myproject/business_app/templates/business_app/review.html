@@ -3,61 +3,80 @@
 {% load static %}
 
 {% block content %}
-
-    <link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            color: #218838; /* Устанавливаем цвет текста */
-        }
-        h2 {
-            font-family: 'Dancing Script', cursive; /* Применяем шрифт к заголовкам */
-        }
-        .navigation {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        .nav-button {
-            background-color: #28a745; /* Зеленый цвет */
-            color: #f7e7ce; /* Шампань */
-            border: none;
-            border-radius: 20px;
-            padding: 5px 15px;
-            text-decoration: none;
-            font-size: 16px;
-            transition: background-color 0.3s;
-            cursor: pointer;
-        }
-
-        .nav-button:hover {
-            background-color: #218838; /* Темнее при наведении */
-        }
-    </style>
+<link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+    body {
+        color: #218838;
+    }
+    h2 {
+        font-family: 'Dancing Script', cursive;
+    }
+    .navigation {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    .nav-button {
+        background-color: #28a745;
+        color: #f7e7ce;
+        border: none;
+        border-radius: 20px;
+        padding: 5px 15px;
+        text-decoration: none;
+        font-size: 16px;
+        transition: background-color 0.3s;
+        cursor: pointer;
+    }
+    .nav-button:hover {
+        background-color: #218838;
+    }
+</style>
 <div class="container mt-4">
-    <!-- Форма для добавления нового отзыва -->
-    <h2>Добавить отзыв</h2>
-    <form method="post" class="mb-4">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="order_id">ID заказа:</label>
-            <input type="number" name="order_id" id="order_id" value="{{ order_id }}" readonly class="form-control">
-        </div>
+    <h1>Отзывы</h1>
+     <!-- Отладочный вывод -->
+    {% if is_authenticated %}
+    <!-- Отладочный вывод -->
+       <p>User is authenticated: {{ is_authenticated }}</p>
+       <p>User has reviewed: {{ user_has_reviewed }}</p>
 
-        <div class="form-group">
-            <label for="content">Текст отзыва:</label>
-            <textarea name="content" id="content" maxlength="240" required class="form-control"></textarea>
-        </div>
+       {% if not user_has_reviewed %}
+           <!-- Форма для добавления нового отзыва -->
+           <form method="post">
+               <!-- поля формы -->
+           </form>
+       {% else %}
+           <p>Вы уже оставили отзыв на этот заказ.</p>
+       {% endif %}
+   {% else %}
+       <p>Пожалуйста, войдите, чтобы оставить отзыв.</p>
+            {% if not user_has_reviewed %}
+            <!-- Форма для добавления нового отзыва -->
+            <h2>Добавить отзыв</h2>
+            <form method="post" class="mb-4">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="order_id">ID заказа:</label>
+                    <input type="number" name="order_id" id="order_id" value="{{ order_id }}" readonly class="form-control">
+                </div>
 
-        <div class="form-group">
-            <label for="rating">Рейтинг:</label>
-            <input type="number" name="rating" id="rating" min="1" max="5" required class="form-control">
-        </div>
+                <div class="form-group">
+                    <label for="content">Текст отзыва:</label>
+                    <textarea name="content" id="content" maxlength="240" required class="form-control"></textarea>
+                </div>
 
-        <button type="submit" class="nav-button">Отправить отзыв</button>
-    </form>
+                <div class="form-group">
+                    <label for="rating">Рейтинг:</label>
+                    <input type="number" name="rating" id="rating" min="1" max="5" required class="form-control">
+                </div>
+
+                <button type="submit" class="nav-button">Отправить отзыв</button>
+            </form>
+        {% else %}
+            <p>Вы уже оставили отзыв для этого заказа.</p>
+        {% endif %}
+    {% endif %}
 
     <!-- Отображение списка отзывов и их ответов -->
     <h2>Список отзывов</h2>
@@ -68,7 +87,7 @@
                     <h5 class="card-title">
                         Отзыв от {{ review.user.first_name }}
                         {% if is_salesman %}
-                            (ID заказа: {{ review.order_id }})
+(ID заказа: {{ review.order_id }})
                         {% endif %}
                     </h5>
                     <small class="text-muted">Рейтинг: {{ review.rating }} | Дата публикации: {{ review.pub_date }}</small>
@@ -86,7 +105,7 @@
                             <label for="reply_content_{{ review.id }}">Ответ:</label>
                             <textarea name="content" id="reply_content_{{ review.id }}" maxlength="240" required class="form-control"></textarea>
                         </div>
-                        <button type="submit" class="nav-button">Отправить отзыв</button>
+                        <button type="submit" class="nav-button">Отправить ответ</button>
                     </form>
                 {% endif %}
 
@@ -98,7 +117,7 @@
                         <p><small class="text-muted">Дата ответа: {{ reply.pub_date }}</small></p>
                     </div>
                 {% empty %}
-                    <p>Нет ответов</p>
+                    <p>Продавец пока не ответил</p>
                 {% endfor %}
             </div>
         </div>

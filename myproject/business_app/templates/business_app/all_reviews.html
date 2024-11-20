@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Все отзывы</h1>
+{% for review in reviews %}
+    <div class="review">
+        <p>{{ review.user_first_name }}: {{ review.text }}</p>
+    </div>
+{% endfor %}
+{% endblock %}

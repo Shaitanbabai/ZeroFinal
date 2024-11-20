@@ -668,10 +668,11 @@ def toggle_product_status(request, product_id):
 """ Методы управления отзывами """
 
 
-@customer_required
 def review(request, order_id):
     if request.method == 'POST':
-        # Проверка на существование отзыва
+        if not request.user.is_authenticated:
+            return redirect('login')
+
         if Review.objects.filter(user=request.user, order_id=order_id).exists():
             return render(request, 'business_app/review.html', {
                 'error': 'Вы уже оставили отзыв на этот заказ.',
@@ -694,19 +695,25 @@ def review(request, order_id):
                 'error': 'Форма заполнена некорректно.'
             })
 
+    # Получение информации о том, оставил ли пользователь отзыв
+    user_has_reviewed = Review.objects.filter(user=request.user, order_id=order_id).exists() if request.user.is_authenticated else False
+
     reviews = Review.objects.filter(order_id=order_id).annotate(user_first_name=F('user__first_name'))
     review_form = ReviewForm()
     reply_form = ReplyForm()
 
-    # Проверка принадлежности пользователя к группе 'salesman'
-    is_reviewer_salesman = request.user.groups.filter(name='salesman').exists()
+    is_reviewer_salesman = request.user.groups.filter(name='salesman').exists() if request.user.is_authenticated else False
+    is_customer = request.user.groups.filter(name='customer').exists() if request.user.is_authenticated else False
 
     context = {
         'reviews': reviews,
         'review_form': review_form,
         'reply_form': reply_form,
         'order_id': order_id,
-        'is_salesman': is_reviewer_salesman  # Добавляем результат проверки в контекст
+        'is_salesman': is_reviewer_salesman,
+        'is_customer': is_customer,
+        'is_authenticated': request.user.is_authenticated,
+        'user_has_reviewed': user_has_reviewed,  # Передача переменной в контекст
     }
     return render(request, 'business_app/review.html', context)
 
@@ -737,6 +744,14 @@ def delete_review(request, review_id):
     local_review = get_object_or_404(Review, id=review_id)
     local_review.delete()
     return redirect('review', order_id=local_review.order_id)
+
+
+def all_reviews(request):
+    reviews = Review.objects.all().select_related('user').annotate(user_first_name=F('user__first_name'))
+    context = {
+        'reviews': reviews
+    }
+    return render(request, 'business_app/all_reviews.html', context)
 
 
 def handle_permission_denied_or_not_found(request, exception=None):
