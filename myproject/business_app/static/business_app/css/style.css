@@ -248,6 +248,29 @@ html, body {
 
 
 /* ==============================
+   Стили для all reviews
+   ============================== */
+.page-header {
+    color: #218838;
+    font-family: 'Dancing Script', cursive;
+    font-size: 20px;
+}
+
+.review-header {
+    color: #218838;
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+}
+
+.review-content {
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+
+
+
+/* ==============================
    Стили для пагинации
    ============================== */
 .pagination {

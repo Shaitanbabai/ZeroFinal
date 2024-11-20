@@ -42,7 +42,7 @@ urlpatterns = [
     path('review/<int:order_id>/', views.review, name='review'),  # Маршрут для отзыва
     path('reply/<int:order_id>/', views.reply_to_review, name='add_reply'),  # Маршрут для ответа на отзыв
     path('review/delete/<int:review_id>/', views.delete_review, name='delete_review'),  # Маршрут для удаления отзыва
-    path('reviews/all/', views.all_reviews, name='all_reviews'),  # Маршрут для отображения всех отзывов
+    path('review/all/', views.all_reviews, name='all_reviews'),  # Маршрут для отображения всех отзывов
 
     # Добавьте другие URL-маршруты, необходимые для вашего приложения
 ]

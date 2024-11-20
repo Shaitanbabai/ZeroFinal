@@ -1,11 +1,34 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+    .page-header {
+    color: #218838;
+    font-family: 'Dancing Script', cursive;
+    font-size: 26px;
+}
 
-<h1>Все отзывы</h1>
-{% for review in reviews %}
-    <div class="review">
-        <p>{{ review.user_first_name }}: {{ review.text }}</p>
-    </div>
-{% endfor %}
+.review-header {
+    color: #218838;
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+}
+
+.review-content {
+    font-size: 18px;
+    margin-top: 5px;
+}
+
+</style>
+<h1 class="page-header">Все отзывы</h1>
+    {% for review in reviews %}
+        <div class="review">
+            <p class="review-header">{{ review.user_first_name }} — {{ review.publish_date|date:"d.m.Y" }}, Рейтинг: {{ review.rating }}</p>
+            <p class="review-content">{{ review.content }}</p>
+        </div>
+    {% endfor %}
 {% endblock %}
