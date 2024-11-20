@@ -4,7 +4,16 @@
 
 {% load form_tags %}
 {% block content %}
-
+<link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+    body {
+        color: #218838; /* Устанавливаем цвет текста */
+    }
+    h2, h5 { /* Применяем шрифт к заголовкам h2 и h5 */
+        font-family: 'Dancing Script', cursive;
+    }
+</style>
 <div class="main-page">
 
     <!-- ==== Каталог товаров ==== -->

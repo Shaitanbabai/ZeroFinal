@@ -20,21 +20,27 @@
 
             <!-- Навигация, в зависимости от состояния аутентификации пользователя -->
            <nav class="navigation">
-               {% if user.is_authenticated %}
-                   {% if is_customer %}
-                       <a href="{% url 'purchase' %}" class="nav-button">Мои покупки</a>
-                   {% elif is_salesman %}
-                       <a href="{% url 'sale' %}" class="nav-button">Мои продажи</a>
-                   {% endif %}
-                   <a href="{% url 'profile' %}" class="nav-button">Профиль</a>
-                   <a href="{% url 'logout' %}" class="nav-button">Выход</a>
-               {% else %}
-                   <a href="{% url 'authorization' %}" class="nav-button">Вход</a>
-               {% endif %}
-           </nav>
+                {% if user.is_authenticated %}
+                    <!-- Проверка, если пользователь суперпользователь -->
+                    {% if user.is_superuser %}
+                        <a href="{% url 'purchase' %}" class="nav-button">Мои покупки</a>
+                        <a href="{% url 'sale' %}" class="nav-button">Мои продажи</a>
+                    {% else %}
+                        <!-- Если не суперпользователь, проверяем принадлежность к группам -->
+                        {% if is_customer %}
+                            <a href="{% url 'purchase' %}" class="nav-button">Мои покупки</a>
+                        {% endif %}
+                        {% if is_salesman %}
+                            <a href="{% url 'sale' %}" class="nav-button">Мои продажи</a>
+                        {% endif %}
+                    {% endif %}
+                    <a href="{% url 'profile' %}" class="nav-button">Профиль</a>
+                    <a href="{% url 'logout' %}" class="nav-button">Выход</a>
+                {% else %}
+                    <a href="{% url 'authorization' %}" class="nav-button">Вход</a>
+                {% endif %}
+            </nav>
         </header>
-
-
 
         <!-- Main Content -->
         <div class="container mt-4 mb-5">
