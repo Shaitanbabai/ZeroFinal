@@ -6,39 +6,123 @@
 {% endblock %}
 
 {% block content %}
-<div class="row">
+<link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+    body {
+        color: #218838; /* Устанавливаем цвет текста */
+    }
+    h2 {
+        font-family: 'Dancing Script', cursive; /* Применяем шрифт к заголовкам */
+    }
+
+    }
+
+    .navigation {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .nav-button {
+        background-color: #28a745 !important; /* Зеленый цвет */
+        color: #f7e7ce !important; /* Шампань */
+        border: none !important;
+        border-radius: 20px !important;
+        padding: 10px 20px !important;
+        text-decoration: none !important;
+        font-size: 16px !important;
+        transition: background-color 0.3s !important;
+        display: block;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .nav-button:hover {
+        background-color: #218838 !important; /* Темнее при наведении */
+    }
+
+    .nav-button-edit {
+        background-color: #007bff !important; /* Синий цвет */
+    }
+
+    .nav-button-edit:hover {
+        background-color: #0056b3 !important; /* Темнее при наведении */
+    }
+
+    .nav-button-negative {
+        background-color: #dc3545 !important; /* Красный цвет */
+    }
+
+    .nav-button-negative:hover {
+        background-color: #c82333 !important; /* Темнее при наведении */
+    }
+
+.product-header {
+    display: flex;
+    justify-content: space-between; /* распределяет пространство между элементами */
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.product-name, .product-price {
+    margin: 0;
+    font-size: calc(200%);
+}
+
+.product-content {
+    display: flex;
+    flex-direction: column; /* располагать элементы в колонку */
+    align-items: center; /* центрировать элементы по горизонтали */
+    text-align: center; /* центрировать текст */
+}
+
+.product-image {
+    width: 70%;
+    transition: transform 0.3s ease-in-out;
+}
+
+.product-image:hover {
+    transform: scale(1.4286);
+}
+</style>
+    <div class="row">
     <div class="col-md-8">
-        <h1>{{ product.name }}</h1>
-        <img src="{{ product.image.url }}" class="img-fluid" alt="{{ product.name }}">
-        <p class="lead">{{ product.description }}</p>
-        <h3>${{ product.price }}</h3>
-    </div>
-
-    <div class="col-md-4">
-        <div class="list-group">
-            {% if user.is_authenticated %}
-                 {% if is_customer %}
-                    <form action="{% url 'add_to_cart' product.id %}" method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="product_id" value="{{ product.id }}">
-                        <button type="submit" class="list-group-item list-group-item-action">Купить</button>
-                    </form>
-
-                {% elif is_salesman %}
-                    <a href="{% url 'update_product' product.id %}" class="list-group-item list-group-item-action">Редактировать</a>
-                    <a href="{% url 'toggle_product_status' product.id %}" class="list-group-item list-group-item-action">
-                        {% if product.is_active %}
-                            Деактивировать
-                        {% else %}
-                            Активировать
-                        {% endif %}
-                    </a>
-                    <a href="{% url 'product_list' %}" class="list-group-item list-group-item-action">В каталог</a>
-                {% endif %}
-            {% else %}
-                <a href="{% url 'authorization' %}" class="list-group-item list-group-item-action">Авторизуйтесь</a>
-            {% endif %}
+        <div class="product-header">
+            <h2 class="product-name">{{ product.name }}</h2>
+            <h2 class="product-price">${{ product.price }}</h2>
+        </div>
+        <div class="product-content">
+            <img src="{{ product.image.url }}" class="img-fluid product-image" alt="{{ product.name }}">
+            <p class="lead">{{ product.description }}</p>
         </div>
     </div>
-</div>
+
+        <div class="col-md-4">
+            <div class="list-group">
+                {% if user.is_authenticated %}
+                    {% if is_customer %}
+                        <form action="{% url 'add_to_cart' product.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="product_id" value="{{ product.id }}">
+                            <button type="submit" class="nav-button">Купить</button>
+                        </form>
+                    {% elif is_salesman %}
+                        <a href="{% url 'update_product' product.id %}" class="nav-button nav-button-edit">Редактировать</a>
+                        <a href="{% url 'toggle_product_status' product.id %}" class="nav-button {% if product.is_active %}nav-button-negative{% else %}nav-button{% endif %}">
+                            {% if product.is_active %}
+                                Деактивировать
+                            {% else %}
+                                Активировать
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'product_list' %}" class="nav-button">В каталог</a>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'authorization' %}" class="nav-button">Авторизуйтесь</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 {% endblock %}

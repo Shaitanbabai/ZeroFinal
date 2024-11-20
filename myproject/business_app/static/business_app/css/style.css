@@ -80,7 +80,7 @@ html, body {
 }
 
 /* ==============================
-   Навигационное меню
+   Навигационнדный блок
    ============================== */
 .navigation {
     display: flex;
@@ -94,14 +94,33 @@ html, body {
     color: #f7e7ce !important; /* Шампань */
     border: none !important;
     border-radius: 20px !important;
-    padding: 5px 15px !important;
+    padding: 10px 20px !important;
     text-decoration: none !important;
     font-size: 16px !important;
     transition: background-color 0.3s !important;
+    display: block;
+    text-align: center;
+    margin-bottom: 10px;
 }
 
 .nav-button:hover {
     background-color: #218838 !important; /* Темнее при наведении */
+}
+
+.nav-button-edit {
+    background-color: #007bff !important; /* Синий цвет */
+}
+
+.nav-button-edit:hover {
+    background-color: #0056b3 !important; /* Темнее при наведении */
+}
+
+.nav-button-negative {
+    background-color: #dc3545 !important; /* Красный цвет */
+}
+
+.nav-button-negative:hover {
+    background-color: #c82333 !important; /* Темнее при наведении */
 }
 
 
@@ -183,6 +202,36 @@ html, body {
 .card-button:hover {
     background-color: #218838 !important; /* Темнее при наведении */
 }
+
+/* ==============================
+   Стили для страницы товара
+   ============================== */
+.product-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px; /* добавляет отступ снизу для разделения с изображением */
+}
+
+.product-name,
+.product-price {
+    margin: 0; /* убирает стандартные отступы у заголовков */
+    font-size: calc(200%);
+}
+
+.ml-3 {
+    margin-left: 1rem; /* добавляет отступ слева для цены */
+}
+
+.product-image {
+    width: 70%; /* уменьшаем размер изображения на 30% */
+    transition: transform 0.3s ease-in-out; /* добавляем анимацию */
+}
+
+.product-image:hover {
+    transform: scale(1.4286); /* увеличиваем изображение до оригинального размера при наведении */
+}
+
 
 
 /* ==============================
