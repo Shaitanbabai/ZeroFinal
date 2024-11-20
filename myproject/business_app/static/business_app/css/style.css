@@ -155,24 +155,31 @@ html, body {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
-    justify-items: stretch;
+    /* Можно добавить padding для отступа от краев контейнера */
+    padding: 10px;
 }
 
 .card {
     display: flex;
     flex-direction: column;
-    height: 100%; /* Убедитесь, что карта занимает всю высоту контейнера */
+    height: 100%; /* Убедитесь, что родительский контейнер имеет высоту */
+    border: 1px solid #ddd; /* Добавление границы для визуального отделения */
+    border-radius: 8px; /* Немного скруглим углы */
+    overflow: hidden; /* Чтобы содержимое не выходило за границы */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Добавим тень для глубины */
 }
 
 .card-body {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Занимает всю оставшуюся высоту карточки */
-    justify-content: space-between; /* Распределяет элементы между началом и концом */
+    flex-grow: 1;
+    justify-content: space-between;
+    padding: 10px; /* Добавим отступы внутри карточки */
 }
 
 .card-title {
     margin-bottom: 0.5rem;
+    font-weight: bold; /* Сделаем заголовок более заметным */
 }
 
 .card-text {
@@ -180,11 +187,13 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 1rem;
+    color: #555; /* Светлый оттенок для текста */
 }
 
 .invisible {
     visibility: hidden;
 }
+
 
 .card-button {
     margin-top: auto; /* Сдвигает кнопку вниз */

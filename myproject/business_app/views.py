@@ -83,10 +83,10 @@ def redirect_user_based_on_group(user):
 
 def main_page(request):
     # Получаем все продукты из базы данных
-    products_list = Product.objects.all()
+    products_list = Product.objects.filter(is_active=True)
 
     # Настройка пагинации
-    paginator = Paginator(products_list, 10)  # Показываем 10 товаров на странице
+    paginator = Paginator(products_list, 6)  # Показываем 6 товаров на странице
     page_number = request.GET.get('page')
     products = paginator.get_page(page_number)
 
