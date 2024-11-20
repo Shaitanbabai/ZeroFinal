@@ -19,20 +19,19 @@
             <div class="site-title">FlowerLover</div>
 
             <!-- Навигация, в зависимости от состояния аутентификации пользователя -->
-            <nav class="navigation">
-                {% if user.is_authenticated %}
-                    {% if is_customer %}
-                        <a href="{% url 'purchase' %}" class="nav-button">Мои покупки</a>
-                    {% elif is_salesman %}
-                        <a href="{% url 'sale' %}" class="nav-button">Мои продажи</a>
-                    {% endif %}
-                    <a href="{% url 'profile' %}" class="nav-button">Профиль</a>
-                    <a href="{% url 'logout' %}" class="nav-button">Выход</a>
-                {% else %}
-                    <a href="{% url 'authorization' %}" class="nav-button">Вход</a>
-                {% endif %}
-            </nav>
-
+           <nav class="navigation">
+               {% if user.is_authenticated %}
+                   {% if is_customer %}
+                       <a href="{% url 'purchase' %}" class="nav-button">Мои покупки</a>
+                   {% elif is_salesman %}
+                       <a href="{% url 'sale' %}" class="nav-button">Мои продажи</a>
+                   {% endif %}
+                   <a href="{% url 'profile' %}" class="nav-button">Профиль</a>
+                   <a href="{% url 'logout' %}" class="nav-button">Выход</a>
+               {% else %}
+                   <a href="{% url 'authorization' %}" class="nav-button">Вход</a>
+               {% endif %}
+           </nav>
         </header>
 
 
