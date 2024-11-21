@@ -309,9 +309,6 @@ def clear_cart(request):
 
 @customer_required
 def cart_detail(request):
-    """
-    Отображает содержимое корзины и общую сумму.
-    """
     try:
         cart = request.session.get('cart', {})
         total_amount = 0
@@ -319,7 +316,7 @@ def cart_detail(request):
 
         for product_id, item in cart.items():
             product = get_object_or_404(Product, id=product_id)
-            price = item.get('price', product.price)  # Используем цену из корзины или из объекта Product
+            price = item.get('price', product.price)
             quantity = item['quantity']
             line_total = price * quantity
 
@@ -327,19 +324,24 @@ def cart_detail(request):
                 'product': product,
                 'quantity': quantity,
                 'price': price,
-                'line_total': line_total  # Добавляем итоговую цену за количество
+                'line_total': line_total
             }
             items_with_products.append(item_with_product)
             total_amount += line_total
 
-        # Создаём экземпляр формы
-        cart_form = CartForm()
+        if request.method == 'POST':
+            cart_form = CartForm(request.POST)
+            if cart_form.is_valid():
+                # Сохраняем данные формы в сессии для передачи в create_order
+                request.session['delivery_details'] = cart_form.cleaned_data
+                return redirect('create_order')
+        else:
+            cart_form = CartForm()
 
-        # Передаём форму в контекст
         context = {
             'cart': items_with_products,
             'total_amount': total_amount,
-            'cart_form': cart_form  # Добавляем форму в контекст
+            'cart_form': cart_form
         }
 
         logger.debug(f"Корзина пользователя {request.user.username}: {items_with_products}")
@@ -347,7 +349,8 @@ def cart_detail(request):
 
     except Exception as e:
         logger.error(f"Ошибка при отображении корзины для пользователя {request.user.username}: {e}")
-        return HttpResponseForbidden("Произошла ошибка при обработке вашего запроса в представлении cart_detail.")
+        return HttpResponseForbidden("Произошла ошибка приобработке вашего запроса в представлении cart_detail.")
+
 
 
 @customer_required
@@ -361,7 +364,6 @@ def create_order(request):
         cart = request.session.get('cart', {})
         if not cart:
             return redirect('cart_detail')
-
         order = Order.objects.create(user=request.user, status=Order.STATUS_CONFIRMED, status_datetime=timezone.now())
         for product_id, item in cart.items():
             product = get_object_or_404(Product, id=product_id)
@@ -381,8 +383,7 @@ def create_order(request):
 @customer_required
 def edit_order(request, order_id):
     """
-    Создает временный заказ для редактирования.
-    Копирует товары из оригинального заказа и помещает их в корзину.
+    Создает временный заказ для редактирования. Копирует товары из оригинального заказа и помещает их в корзину.
     """
     original_order = get_object_or_404(Order, id=order_id, user=request.user)
 

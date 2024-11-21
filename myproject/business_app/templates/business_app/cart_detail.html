@@ -43,7 +43,7 @@
         <!-- Sidebar for navigation -->
         <div class="col-md-3">
             <div class="sidebar navigation">
-                <form method="post" action="{% url 'create_order' %}">
+                <form method="post" class="cart-form" action="{% url 'create_order' %}">
                     {% csrf_token %}
                     <button type="submit" class="nav-button">Оформить заказ</button>
                 </form>
@@ -95,25 +95,29 @@
             </div>
 
             <!-- Cart form for additional details -->
-            <form method="post" class="cart-form">
+            <form method="post" class="cart-form" action="{% url 'create_order' %}">
                 {% csrf_token %}
                 <div class="form-row">
                     <div class="form-group">
                         <label>Телефон:</label>
+                        {{ cart_form.phone.errors }}
                         {{ cart_form.phone }}
                     </div>
                     <div class="form-group">
                         <label>Telegram Key:</label>
+                        {{ cart_form.telegram_key.errors }}
                         {{ cart_form.telegram_key }}
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Адрес:</label>
+                        {{ cart_form.address.errors }}
                         {{ cart_form.address }}
                     </div>
                     <div class="form-group">
                         <label>Комментарий:</label>
+                        {{ cart_form.comment.errors }}
                         {{ cart_form.comment }}
                     </div>
                 </div>

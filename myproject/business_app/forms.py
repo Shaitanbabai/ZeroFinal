@@ -119,12 +119,11 @@ class CartForm(forms.ModelForm):
         model = Order
         fields = ['phone', 'address', 'comment', 'telegram_key']
         widgets = {
-            'phone': forms.TextInput(attrs={'placeholder': '+71234567890', 'required':True}),
-            'address': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Город, Улица, Дом, Подъезд, Квартира/Офис', 'required':True}),
+            'phone': forms.TextInput(attrs={'placeholder': '+71234567890', 'required': True}),
+            'address': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Город, Улица, Дом, Подъезд, Квартира/Офис', 'required': True}),
             'comment': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Комментарии к заказу для магазина, курьера или получателя', 'required': False}),
             'telegram_key': forms.TextInput(attrs={'maxlength': 120, 'placeholder': 'Введите ваш Telegram Key, если хотите отслеживать заказ в боте', 'required': True}),
         }
-
         labels = {
             'phone': 'Телефон получателя',
             'address': 'Адрес доставки',
