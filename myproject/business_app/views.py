@@ -46,9 +46,9 @@ from .models import Order, OrderItem
 from .models import Review
 from .forms import ReviewForm, ReplyForm
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
-
 
 """ Блок классов управляющий авторизацией и регистрацией."""
 
@@ -309,72 +309,109 @@ def clear_cart(request):
 
 @customer_required
 def cart_detail(request):
+    """
+    Отображает содержимое корзины и общую сумму.
+    """
     try:
         cart = request.session.get('cart', {})
-        total_amount = 0
         items_with_products = []
 
+        logger.debug(f"Обрабатываем корзину: {cart}")
         for product_id, item in cart.items():
-            product = get_object_or_404(Product, id=product_id)
+            logger.debug(f"Обрабатывается product_id: {product_id}, item: {item}")
+            if not product_id:
+                logger.error(f"Продукт с пустым ID: {item}")
+                continue  # Пропускаем некорректные элементы
+
+            # Преобразуем ключ product_id в int и проверяем его
+            try:
+                product = get_object_or_404(Product, id=int(product_id))
+            except ValueError:
+                logger.error(f"Некорректный формат product_id: {product_id}")
+                continue
+
             price = item.get('price', product.price)
             quantity = item['quantity']
             line_total = price * quantity
 
-            item_with_product = {
+            items_with_products.append({
                 'product': product,
                 'quantity': quantity,
                 'price': price,
-                'line_total': line_total
-            }
-            items_with_products.append(item_with_product)
-            total_amount += line_total
-
-        if request.method == 'POST':
-            cart_form = CartForm(request.POST)
-            if cart_form.is_valid():
-                # Сохраняем данные формы в сессии для передачи в create_order
-                request.session['delivery_details'] = cart_form.cleaned_data
-                return redirect('create_order')
-        else:
-            cart_form = CartForm()
+                'line_total': line_total,
+            })
 
         context = {
             'cart': items_with_products,
-            'total_amount': total_amount,
-            'cart_form': cart_form
+            'total_amount': sum(item['line_total'] for item in items_with_products),
+            'cart_form': CartForm(),
         }
-
-        logger.debug(f"Корзина пользователя {request.user.username}: {items_with_products}")
         return render(request, 'business_app/cart_detail.html', context)
 
     except Exception as e:
-        logger.error(f"Ошибка при отображении корзины для пользователя {request.user.username}: {e}")
-        return HttpResponseForbidden("Произошла ошибка приобработке вашего запроса в представлении cart_detail.")
+        logger.error(f"Ошибка при отображении корзины: {e}")
+        return HttpResponseForbidden("Произошла ошибка при обработке корзины.")
 
+
+def calculate_total_amount(order):
+    return sum(item.product.price * item.quantity for item in order.orderitem_set.all())
 
 
 @customer_required
 def create_order(request):
-    """
-    Создает заказ на основе содержимого корзины.
-    После создания очищает корзину.
-    """
     if request.method == 'POST':
-        # Создаем новый заказ на основе данных из сессии
         cart = request.session.get('cart', {})
+        cart_data = request.POST.get('cart_data')
+
+        logger.debug(f"Содержимое корзины перед созданием заказа: {cart}")
+        logger.debug(f"Полученные данные корзины из формы: {cart_data}")
+
         if not cart:
             return redirect('cart_detail')
-        order = Order.objects.create(user=request.user, status=Order.STATUS_CONFIRMED, status_datetime=timezone.now())
-        for product_id, item in cart.items():
-            product = get_object_or_404(Product, id=product_id)
-            OrderItem.objects.create(order=order, product=product, quantity=item['quantity'])
 
-        # После создания заказа очищаем временные данные корзины
-        if 'cart' in request.session:
-            del request.session['cart']
+        cart_form = CartForm(request.POST)
+        if cart_form.is_valid():
+            order = Order.objects.create(
+                user=request.user,
+                phone=cart_form.cleaned_data['phone'],
+                address=cart_form.cleaned_data['address'],
+                comment=cart_form.cleaned_data.get('comment', ''),
+                status=Order.STATUS_CONFIRMED,
+                status_datetime=timezone.now()
+            )
 
-        return redirect('purchase')
+            for product_id, item in cart.items():
+                try:
+                    product_id = int(product_id)
+                    product = get_object_or_404(Product, id=product_id)
+                    OrderItem.objects.create(order=order, product=product, quantity=item['quantity'])
+                except Exception as e:
+                    logger.error(f"Ошибка обработки товара: {e}")
 
+            request.session['cart'] = {}
+            request.session.save()
+            return redirect('purchase')
+        else:
+            logger.error(f"Форма недействительна: {cart_form.errors}")
+
+            items_with_products = []
+            for product_id, item in cart.items():
+                product = get_object_or_404(Product, id=int(product_id))
+                price = item.get('price', product.price)
+                quantity = item['quantity']
+                line_total = price * quantity
+                items_with_products.append({
+                    'product': product,
+                    'quantity': quantity,
+                    'price': price,
+                    'line_total': line_total,
+                })
+
+            return render(request, 'business_app/cart_detail.html', {
+                'cart': items_with_products,
+                'total_amount': sum(item['line_total'] for item in items_with_products),
+                'cart_form': cart_form
+            })
     return redirect('cart_detail')
 
 
@@ -497,9 +534,6 @@ def cancel_order(request, order_id):
             order.save()
 
     return redirect('purchase')
-
-def calculate_total_amount(order):
-    return sum(item.product.price * item.quantity for item in order.orderitem_set.all())
 
 
 @customer_required
@@ -669,53 +703,41 @@ def toggle_product_status(request, product_id):
 """ Методы управления отзывами """
 
 
+@login_required  # Добавляем декоратор для проверки аутентификации
 def review(request, order_id):
-    if request.method == 'POST':
-        if not request.user.is_authenticated:
-            return redirect('login')
+    # Получаем информацию о группах пользователя
+    context = get_user_group_context(request.user)
 
-        if Review.objects.filter(user=request.user, order_id=order_id).exists():
-            return render(request, 'business_app/review.html', {
-                'error': 'Вы уже оставили отзыв на этот заказ.',
-                'order_id': order_id,
-                'reviews': Review.objects.filter(order_id=order_id),
-                'review_form': ReviewForm()
-            })
+    # Проверяем, оставлял ли пользователь отзыв
+    user_has_reviewed = Review.objects.filter(user=request.user, order_id=order_id).exists()
+
+    if request.method == 'POST':
+        if user_has_reviewed:
+            messages.error(request, 'Вы уже оставили отзыв на этот заказ.')
+            return redirect('review', order_id=order_id)
 
         form = ReviewForm(request.POST)
         if form.is_valid():
-            local_review = form.save(commit=False)
-            local_review.user = request.user
-            local_review.order_id = order_id
-            local_review.save()
+            review = form.save(commit=False)
+            review.user = request.user
+            review.order_id = order_id
+            review.save()
+            messages.success(request, 'Отзыв успешно добавлен.')
             return redirect('review', order_id=order_id)
-        else:
-            return render(request, 'business_app/review.html', {
-                'review_form': form,
-                'order_id': order_id,
-                'error': 'Форма заполнена некорректно.'
-            })
+    else:
+        form = ReviewForm()
 
-    # Получение информации о том, оставил ли пользователь отзыв
-    user_has_reviewed = Review.objects.filter(user=request.user, order_id=order_id).exists() if request.user.is_authenticated else False
+    # Получаем все отзывы для данного заказа
+    reviews = Review.objects.filter(order_id=order_id).select_related('user')
 
-    reviews = Review.objects.filter(order_id=order_id).annotate(user_first_name=F('user__first_name'))
-    review_form = ReviewForm()
-    reply_form = ReplyForm()
-
-    is_reviewer_salesman = request.user.groups.filter(name='salesman').exists() if request.user.is_authenticated else False
-    is_customer = request.user.groups.filter(name='customer').exists() if request.user.is_authenticated else False
-
-    context = {
+    # Обновляем контекст
+    context.update({
         'reviews': reviews,
-        'review_form': review_form,
-        'reply_form': reply_form,
+        'form': form,
         'order_id': order_id,
-        'is_salesman': is_reviewer_salesman,
-        'is_customer': is_customer,
-        'is_authenticated': request.user.is_authenticated,
-        'user_has_reviewed': user_has_reviewed,  # Передача переменной в контекст
-    }
+        'user_has_reviewed': user_has_reviewed,
+    })
+
     return render(request, 'business_app/review.html', context)
 
 
@@ -748,7 +770,8 @@ def delete_review(request, review_id):
 
 
 def all_reviews(request):
-    reviews = Review.objects.all().select_related('user').annotate(user_first_name=F('user__first_name'))
+    reviews = Review.objects.all().select_related('user').order_by('-pub_date').annotate(user_first_name=F('user__first_name'))
+
     context = {
         'reviews': reviews
     }

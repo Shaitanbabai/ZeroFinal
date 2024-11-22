@@ -4,31 +4,63 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'business_app/styles.css' %}">
-<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<!--<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">-->
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&subset=cyrillic&display=swap" rel="stylesheet">
 <style>
     .page-header {
-    color: #218838;
-    font-family: 'Dancing Script', cursive;
-    font-size: 26px;
-}
+        color: #218838;
+        font-family: 'Great Vibes', cursive, bold;
+        font-size: 32px;
+        text-align: center;
+    }
 
-.review-header {
-    color: #218838;
-    font-family: 'Arial', sans-serif;
-    font-size: 18px;
-}
+    .reviews-container {
+        font-family: 'Great Vibes', cursive, bold;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-.review-content {
-    font-size: 18px;
-    margin-top: 5px;
-}
+    .review {
+        font-family: 'Great Vibes', cursive, bold;
+        width: 80%;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+    }
+
+    .review-header {
+        color: #218838;
+        font-family: 'Great Vibes', cursive, bold;
+        font-size: 26px;
+        margin-bottom: 5px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .review-content {
+        font-family: 'Great Vibes', cursive, bold;
+        display: flex;
+        font-size: 20px;
+        margin-top: 5px;
+    }
+
+
+
+
 
 </style>
+
 <h1 class="page-header">Все отзывы</h1>
+<div class="reviews-container">
     {% for review in reviews %}
         <div class="review">
-            <p class="review-header">{{ review.user_first_name }} — {{ review.publish_date|date:"d.m.Y" }}, Рейтинг: {{ review.rating }}</p>
+            <p class="review-header">
+                <span>{{ review.user_first_name }}</span>
+                <span>{{ review.pub_date|date:"d.m.Y" }}, Рейтинг: {{ review.rating }}</span>
+            </p>
             <p class="review-content">{{ review.content }}</p>
         </div>
     {% endfor %}
+</div>
 {% endblock %}

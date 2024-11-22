@@ -40,15 +40,11 @@
 
 <div class="container">
     <div class="row">
-        <!-- Sidebar for navigation -->
         <div class="col-md-3">
             <div class="sidebar navigation">
-                <form method="post" class="cart-form" action="{% url 'create_order' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="nav-button">Оформить заказ</button>
-                </form>
                 <button class="nav-button" onclick="window.location.href='{% url 'clear_cart' %}'">Сбросить всё</button>
                 <button class="nav-button" onclick="window.location.href='{% url 'main_page' %}'">Добавить товар</button>
+                <button class="nav-button" onclick="submitMainForm()">Оформить заказ</button>
             </div>
         </div>
 
@@ -60,27 +56,14 @@
             <div class="cart-items">
                 {% for item in cart %}
                     <div class="cart-item">
-                        <!-- Ссылка на карточку товара -->
                         <a href="{% url 'product_detail' item.product.id %}">{{ item.product.name }}</a>
-
-                        <!-- Описание товара -->
                         <p>{{ item.product.description }}</p>
-
-                        <!-- Превью изображения -->
                         {% if item.product.image %}
                             <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" style="max-width: 100px;">
                         {% endif %}
-
-                        <!-- Количество товара -->
                         <span>Количество: {{ item.quantity }}</span>
-
-                        <!-- Цена за штуку -->
                         <span>Цена за штуку: {{ item.price|floatformat:2 }}</span>
-
-                        <!-- Итоговая цена за количество -->
                         <span>Итого: {{ item.line_total|floatformat:2 }}</span>
-
-                        <!-- Кнопки управления -->
                         <button class="btn btn-sm btn-success" onclick="window.location.href='{% url 'add_to_cart' item.product.id %}'">Добавить</button>
                         <button class="btn btn-sm btn-danger" onclick="window.location.href='{% url 'remove_from_cart' item.product.id %}'">Убрать</button>
                     </div>
@@ -94,8 +77,8 @@
                 <strong>Общая сумма: {{ total_amount|floatformat:2 }}</strong>
             </div>
 
-            <!-- Cart form for additional details -->
-            <form method="post" class="cart-form" action="{% url 'create_order' %}">
+            <!-- Основная форма для оформления заказа -->
+            <form id="mainOrderForm" method="post" class="cart-form" action="{% url 'create_order' %}">
                 {% csrf_token %}
                 <div class="form-row">
                     <div class="form-group">
@@ -121,8 +104,14 @@
                         {{ cart_form.comment }}
                     </div>
                 </div>
+
             </form>
         </div>
     </div>
 </div>
+<script>
+    function submitMainForm() {
+        document.getElementById('mainOrderForm').submit();
+    }
+</script>
 {% endblock %}
