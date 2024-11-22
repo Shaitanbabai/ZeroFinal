@@ -371,13 +371,19 @@ def create_order(request):
 
         cart_form = CartForm(request.POST)
         if cart_form.is_valid():
+            # Рассчитываем итоговую сумму заказа
+            total_amount = sum(item['quantity'] * item.get('price', get_object_or_404(Product, id=int(product_id)).price)
+                               for product_id, item in cart.items())
+
+            # Создаем заказ с расчетной суммой
             order = Order.objects.create(
                 user=request.user,
                 phone=cart_form.cleaned_data['phone'],
                 address=cart_form.cleaned_data['address'],
                 comment=cart_form.cleaned_data.get('comment', ''),
                 status=Order.STATUS_CONFIRMED,
-                status_datetime=timezone.now()
+                status_datetime=timezone.now(),
+                total_amount=total_amount  # Записываем итоговую сумму в заказ
             )
 
             for product_id, item in cart.items():
@@ -388,6 +394,7 @@ def create_order(request):
                 except Exception as e:
                     logger.error(f"Ошибка обработки товара: {e}")
 
+            # Очищаем корзину после создания заказа
             request.session['cart'] = {}
             request.session.save()
             return redirect('purchase')
