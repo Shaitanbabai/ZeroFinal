@@ -46,7 +46,6 @@ from .models import Order, OrderItem
 from .models import Review
 from .forms import ReviewForm, ReplyForm
 
-
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -526,30 +525,44 @@ def confirm_order_changes(request, order_id):
         return HttpResponseForbidden("Произошла ошибка при обработке вашего запроса в представлении confirm_order_changes.")
 
 
-@customer_required
-def cancel_order(request, order_id):
+# @customer_required
+# def cancel_order(request, order_id):
+#     """
+#     Отменяет заказ
+#     """
+#     # Получаем заказ пользователя с определенным ID и проверяем его статус
+#     order = get_object_or_404(Order, id=order_id, user=request.user)
+#     if order.status == Order.STATUS_CONFIRMED:
+#         # Начинаем транзакцию
+#         with transaction.atomic():
+#             order.status = Order.STATUS_CANCELED
+#             order.status_datetime = timezone.now()
+#             order.save()
+#
+#     return redirect('purchase')
+
+
+"""Методы управления заказами на стороне покупателя"""
+
+
+def get_order_context(user=None):
     """
-    Отменяет заказ
+    Возвращает словарь с текущими и историческими заказами.
+    Если user передан, то фильтрует заказы по пользователю.
+
+    Текущие статусы:
+    - STATUS_PENDING: Заказ ожидает обработки
+    - STATUS_CONFIRMED: Заказ подтвержден и готовится к отправке
+    - STATUS_DELIVERY: Заказ находится в процессе доставки
+
+    Исторические статусы:
+    - STATUS_COMPLETED: Заказ завершен и доставлен
+    - STATUS_CANCELED: Заказ отменен
     """
-    # Получаем заказ пользователя с определенным ID и проверяем его статус
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    if order.status == Order.STATUS_CONFIRMED:
-        # Начинаем транзакцию
-        with transaction.atomic():
-            order.status = Order.STATUS_CANCELED
-            order.status_datetime = timezone.now()
-            order.save()
+    orders = Order.objects.all()
+    if user:
+        orders = orders.filter(user=user)
 
-    return redirect('purchase')
-
-
-@customer_required
-def purchase(request):
-    # Получаем заказы текущего пользователя
-    orders = Order.objects.filter(user=request.user).prefetch_related('orderitem_set__product').order_by(
-        '-status_datetime')
-
-    # Разделяем заказы на текущие и исторические
     current_orders = orders.filter(status__in=[
         Order.STATUS_PENDING,
         Order.STATUS_CONFIRMED,
@@ -561,8 +574,7 @@ def purchase(request):
         Order.STATUS_CANCELED
     ])
 
-    # Подготовка контекста для передачи в шаблон
-    context = {
+    return {
         'current_orders': current_orders,
         'historical_orders': historical_orders,
         'STATUS_PENDING': Order.STATUS_PENDING,
@@ -572,36 +584,167 @@ def purchase(request):
         'STATUS_CANCELED': Order.STATUS_CANCELED,
     }
 
+@customer_required
+def cancel_order(request, order_id):
+    """
+    Позволяет клиенту отменить заказ в статусе confirmed.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    with transaction.atomic():
+        if order.status == Order.STATUS_CONFIRMED:
+            order.status = Order.STATUS_CANCELED
+            order.status_datetime = timezone.now()
+            order.save()
+
+    return redirect('purchase')
+
+
+@customer_required
+def purchase(request):
+    """
+    Панель пользователя для просмотра его заказов.
+    """
+    context = get_order_context(user=request.user)
+
     return render(request, 'business_app/purchase.html', context)
+
 
 """ Методы работы с продавцами управления продуктами каталога и статистикой продаж """
 
-def is_salesman (user):
-    """Проверка, является ли пользователь членом группы 'salesman'."""
-    try:
-        result = user.groups.filter(name='salesman').exists()
-        logger.debug(f"Проверка is_salesman для пользователя {user.username}: {result}")
-        return result
-    except Exception as e:
-        logger.error(f"Ошибка при проверке группы пользователя: {e}")
-        return False  # Здесь возврат False логичен, так как мы не можем подтвердить принадлежность к группе
-
-# # @login_required
-# def sale(request):
-#     context = get_user_group_context(request.user)
-#     if context['is_salesman']:
-#         return render(request, 'business_app/sale.html', context)
-#     else:
-#         return redirect(reverse('main_page'))
 
 @salesman_required
 def sale(request):
     """
-    Получение доступа к панели продавца,
-    в которой есть возможность управлению продуктами, заказами, их мониторинга и анализа статистики.
+    Доступ к панели продавца для управления заказами. Контекст заказа определен в get_order_context
     """
-    context = get_user_group_context(request.user)
+    context = get_order_context()
+
     return render(request, 'business_app/sale.html', context)
+
+@salesman_required
+def manage_orders(request, order_id, action):
+    """
+    Управление заказами: изменение статусов.
+    action - действие: confirmed, delivery, completed, canceled
+    """
+    order = get_object_or_404(Order, id=order_id)
+
+    with transaction.atomic():
+        if action == 'confirm' and order.status == Order.STATUS_PENDING:
+            order.status = Order.STATUS_CONFIRMED
+        elif action == 'deliver' and order.status == Order.STATUS_CONFIRMED:
+            order.status = Order.STATUS_DELIVERY
+        elif action == 'complete' and order.status == Order.STATUS_DELIVERY:
+            order.status = Order.STATUS_COMPLETED
+        elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
+            order.status = Order.STATUS_CANCELED
+
+        order.status_datetime = timezone.now()
+        order.save()
+
+    return redirect('sale')
+
+
+# @customer_required
+# def purchase(request):
+#     # Получаем заказы текущего пользователя
+#     orders = Order.objects.filter(user=request.user).prefetch_related('orderitem_set__product').order_by(
+#         '-status_datetime')
+#
+#     # Разделяем заказы на текущие и исторические
+#     current_orders = orders.filter(status__in=[
+#         Order.STATUS_PENDING,
+#         Order.STATUS_CONFIRMED,
+#         Order.STATUS_DELIVERY
+#     ])
+#
+#     historical_orders = orders.filter(status__in=[
+#         Order.STATUS_COMPLETED,
+#         Order.STATUS_CANCELED
+#     ])
+#
+#     # Подготовка контекста для передачи в шаблон
+#     context = {
+#         'current_orders': current_orders,
+#         'historical_orders': historical_orders,
+#         'STATUS_PENDING': Order.STATUS_PENDING,
+#         'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
+#         'STATUS_DELIVERY': Order.STATUS_DELIVERY,
+#         'STATUS_COMPLETED': Order.STATUS_COMPLETED,
+#         'STATUS_CANCELED': Order.STATUS_CANCELED,
+#     }
+#
+#     return render(request, 'business_app/purchase.html', context)
+
+#
+# def is_salesman (user):
+#     """Проверка, является ли пользователь членом группы 'salesman'."""
+#     try:
+#         result = user.groups.filter(name='salesman').exists()
+#         logger.debug(f"Проверка is_salesman для пользователя {user.username}: {result}")
+#         return result
+#     except Exception as e:
+#         logger.error(f"Ошибка при проверке группы пользователя: {e}")
+#         return False  # Возврат False так как мы не можем подтвердить принадлежность к группе
+#
+#
+# @salesman_required
+# def sale(request):
+#     """
+#     Доступ к панели продавца для управления заказами.
+#     """
+#     # Получаем все заказы всех покупателей
+#     orders = Order.objects.all().prefetch_related('orderitem_set__product').order_by('-status_datetime')
+#
+#     # Разделяем заказы на текущие и исторические
+#     current_orders = orders.filter(status__in=[
+#         Order.STATUS_PENDING,
+#         Order.STATUS_CONFIRMED,
+#         Order.STATUS_DELIVERY
+#     ])
+#
+#     historical_orders = orders.filter(status__in=[
+#         Order.STATUS_COMPLETED,
+#         Order.STATUS_CANCELED
+#     ])
+#
+#     # Подготовка контекста для передачи в шаблон
+#     context = {
+#         'current_orders': current_orders,
+#         'historical_orders': historical_orders,
+#         'STATUS_PENDING': Order.STATUS_PENDING,
+#         'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
+#         'STATUS_DELIVERY': Order.STATUS_DELIVERY,
+#         'STATUS_COMPLETED': Order.STATUS_COMPLETED,
+#         'STATUS_CANCELED': Order.STATUS_CANCELED,
+#     }
+#
+#     return render(request, 'business_app/sale.html', context)
+#
+#
+# @salesman_required
+# def manage_orders(request, order_id, action):
+#     """
+#     Управление заказами: изменение статусов.
+#     """
+#     # Получаем заказ по ID
+#     order = get_object_or_404(Order, id=order_id)
+#
+#     # Начинаем транзакцию
+#     with transaction.atomic():
+#         if action == 'confirm' and order.status == Order.STATUS_PENDING:
+#             order.status = Order.STATUS_CONFIRMED
+#         elif action == 'deliver' and order.status == Order.STATUS_CONFIRMED:
+#             order.status = Order.STATUS_DELIVERY
+#         elif action == 'complete' and order.status == Order.STATUS_DELIVERY:order.status = Order.STATUS_COMPLETED
+#         elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
+#             order.status = Order.STATUS_CANCELED
+#
+#         order.status_datetime = timezone.now()
+#         order.save()
+#
+#     return redirect('sale')
 
 
 @salesman_required
