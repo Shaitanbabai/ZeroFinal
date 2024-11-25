@@ -11,6 +11,7 @@
             <div class="list-group-item">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <span><strong>Заказ №{{ order.id }}</strong></span>
+                    <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
                     <span><strong>Общая стоимость: {{ order.total_amount|floatformat:2 }}</strong></span>
                     <div>
                         {% if order.status == STATUS_PENDING or order.status == STATUS_CONFIRMED %}
@@ -57,6 +58,7 @@
             <div class="list-group-item">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <span><strong>Заказ №{{ order.id }}</strong></span>
+                    <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
                     <span>Общая стоимость: {{ order.total_amount|floatformat:2 }}</span>
 
                     <div>

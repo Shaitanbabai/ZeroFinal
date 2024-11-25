@@ -30,6 +30,7 @@ urlpatterns = [
     path('cancel_order/<int:order_id>/', views.cancel_order, name='cancel_order'),  # Маршрут отменяет заказ, если он был подтверждён
 
     path('sale/', views.sale, name='sale'),  # Страница "Мои продажи", интерфейс продавца
+    path('manage_orders/<int:order_id>/<str:action>/', views.manage_orders, name='manage_orders'),  # Маршрут для управления заказами
     path('products/', views.product_list, name='product_list'),  # Маршрут к шаблону продукта
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),  # Маршрут для просмотра выбранного продукта
     path('create/', views.create_product, name='create_product'),  # Маршрут для создания продукта

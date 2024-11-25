@@ -3,33 +3,126 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-3">
-            <!-- Боковое навигационное меню -->
-            <div class="sidebar">
-                {% if is_salesman %}
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link nav-button" href="{% url 'create_product' %}">Создать товар</a>
+    <h2>Текущие заказы</h2>
+    <div class="list-group mb-4">
+        {% for order in current_orders %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <span><strong>Заказ №{{ order.id }}</strong></span>
+                    <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
+                    <span><strong>Общая стоимость: {{ order.total_amount|floatformat:2 }}</strong></span>
+                    <div>
+                        <form method="post" id="order-form-{{ order.id }}" action="{% url 'manage_orders' order.id 'dummy_action' %}"
+                              style="display:inline;" onsubmit="return updateFormAction(event, {{ order.id }});">
+                            {% csrf_token %}
+                            <select name="action" id="action-select-{{ order.id }}" class="form-select btn-sm mx-1">
+                                <option value="" selected>-- Выберите --</option>
+                                {% if order.status == STATUS_PENDING %}
+                                    <option value="confirm">Подтвердить</option>
+                                    <option value="cancel">Отменить</option>
+                                {% elif order.status == STATUS_CONFIRMED %}
+                                    <option value="deliver">В доставку</option>
+                                    <option value="cancel">Отменить</option>
+                                {% elif order.status == STATUS_DELIVERY %}
+                                    <option value="complete">Завершить</option>
+                                {% endif %}
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm">Изменить статус</button>
+                        </form>
+
+                        <script>
+                        function updateFormAction(event, orderId) {
+                            var selectElement = document.getElementById('action-select-' + orderId);
+                            var action = selectElement.value;
+                            var form = document.getElementById('order-form-' + orderId);
+
+                            // Предотвращение стандартной отправки формы
+                            event.preventDefault();
+
+                            console.log('Selected action:', action);
+
+                            // Проверяем, выбрано ли действие
+                            if (!action) {
+                                console.warn('No action selected');
+                                return false;
+                            }
+
+                            // Проверяем, что form.action является строкой и обновляем URL действия формы
+                            if (typeof form.action === 'string') {
+                                form.action = form.action.replace('dummy_action', action);
+                                console.log('Updated form action:', form.action);
+                            } else {
+                                console.error('form.action is not a string:', form.action);
+                                return false;
+                            }
+
+                            // Теперь отправляем форму
+                            form.submit();
+
+                            return true;
+                        }
+                        </script>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <p><strong>Телефон:</strong> {{ order.phone }}</p>
+                    <p><strong>Адрес:</strong> {{ order.address }}</p>
+                    <p><strong>Комментарий:</strong> {{ order.comment }}</p>
+                </div>
+                <ul class="list-group mt-2">
+                    {% for item in order.orderitem_set.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px;">
+                                <div class="ml-3">
+                                    <h6>{{ item.product.name }}</h6>
+                                    <p>Цена: {{ item.product.price }} x {{ item.quantity }}</p>
+                                </div>
+                            </div>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-button" href="{% url 'product_list' %}">Список товаров</a>
-                        </li>
-<!--                        <li class="nav-item">-->
-<!--                            <a class="nav-link nav-button" href="{% url 'open_orders' %}">Открытые заказы</a>-->
-<!--                        </li>-->
-<!--                        <li class="nav-item">-->
-<!--                            <a class="nav-link nav-button" href="{% url 'sales_statistics' %}">Статистика продаж</a>-->
-<!--                        </li>-->
-                    </ul>
-                {% endif %}
+                    {% endfor %}
+                </ul>
             </div>
-        </div>
-        <div class="col-md-9">
-            <!-- Здесь будет основной контент страницы -->
-            {% block sale_content %}
-            {% endblock %}
-        </div>
+        {% empty %}
+            <p>Нет текущих заказов.</p>
+        {% endfor %}
+    </div>
+    <h2>Исторические заказы</h2>
+    <div class="list-group">
+        {% for order in historical_orders %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <span><strong>Заказ №{{ order.id }}</strong></span>
+                    <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
+                    <span>Общая стоимость: {{ order.total_amount|floatformat:2 }}</span>
+                    <div>
+                        {% if order.review_set.exists %}
+                            <a href="{% url 'review' order.id %}" class="btn btn-secondary btn-sm">Ответ на отзыв</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <p><strong>Телефон:</strong> {{ order.phone }}</p>
+                    <p><strong>Адрес:</strong> {{ order.address }}</p>
+                    <p><strong>Комментарий:</strong> {{ order.comment }}</p>
+                </div>
+                <ul class="list-group mt-2">
+                    {% for item in order.orderitem_set.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+<div class="d-flex align-items-center">
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px;">
+                                <div class="ml-3">
+                                    <h6>{{ item.product.name }}</h6>
+                                    <p>Цена: {{ item.product.price }} x {{ item.quantity }}</p>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% empty %}
+            <p>Нет исторических заказов.</p>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

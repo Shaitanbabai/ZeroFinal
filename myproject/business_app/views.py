@@ -46,6 +46,7 @@ from .models import Order, OrderItem
 from .models import Review
 from .forms import ReviewForm, ReplyForm
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -622,13 +623,13 @@ def sale(request):
 
     return render(request, 'business_app/sale.html', context)
 
+
 @salesman_required
 def manage_orders(request, order_id, action):
-    """
-    Управление заказами: изменение статусов.
-    action - действие: confirmed, delivery, completed, canceled
-    """
+    logger.debug('Entering manage_orders with order_id=%s and action=%s', order_id, action)
+
     order = get_object_or_404(Order, id=order_id)
+    logger.debug('Current order status: %s', order.status)
 
     with transaction.atomic():
         if action == 'confirm' and order.status == Order.STATUS_PENDING:
@@ -639,10 +640,14 @@ def manage_orders(request, order_id, action):
             order.status = Order.STATUS_COMPLETED
         elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
             order.status = Order.STATUS_CANCELED
+        else:
+            logger.warning('Invalid action or status for order_id=%s: action=%s, status=%s', order_id, action,
+                           order.status)
 
         order.status_datetime = timezone.now()
         order.save()
 
+    logger.debug('Order %s updated to status %s', order_id, order.status)
     return redirect('sale')
 
 
