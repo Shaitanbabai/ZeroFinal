@@ -80,7 +80,7 @@ class Order(models.Model):
 class Review(models.Model):
     objects = None
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    order_id = models.IntegerField()
+    order_id = models.IntegerField()  # Верните обратно в IntegerField
     content = models.TextField(max_length=240)
     rating = models.IntegerField()
     pub_date = models.DateTimeField(auto_now_add=True)

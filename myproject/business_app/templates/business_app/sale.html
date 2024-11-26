@@ -59,12 +59,18 @@
 
                         <script>
                         function updateFormAction(event, orderId) {
-                            var selectElement = document.getElementById('action-select-' + orderId);
-                            var action = selectElement.value;
-                            var form = document.getElementById('order-form-' + orderId);
-
                             // Предотвращение стандартной отправки формы
                             event.preventDefault();
+
+                            var selectElement = document.getElementById('action-select-' + orderId);
+                            var action = selectElement ? selectElement.value : null;
+                            var form = document.getElementById('order-form-' + orderId);
+
+                            // Проверка существования элемента формы
+                            if (!(form instanceof HTMLFormElement)) {
+                                console.error('Element is not a form:', form);
+                                return false;
+                            }
 
                             console.log('Selected action:', action);
 
@@ -73,13 +79,13 @@
                                 console.warn('No action selected');
                                 return false;
                             }
-
+                        
                             // Проверяем, что form.action является строкой и обновляем URL действия формы
-                            if (typeof form.action === 'string') {
+                            if (typeof form.action === 'string' && form.action.includes('dummy_action')) {
                                 form.action = form.action.replace('dummy_action', action);
                                 console.log('Updated form action:', form.action);
                             } else {
-                                console.error('form.action is not a string:', form.action);
+                                console.error('form.action is not a string or does not contain dummy_action:', form.action);
                                 return false;
                             }
 
@@ -115,6 +121,7 @@
         {% endfor %}
     </div>
     <h2>Исторические заказы</h2>
+             <p>Количество отзывов: {{ order.reviews.count }}</p>
     <div class="list-group">
         {% for order in historical_orders %}
             <div class="list-group-item">
@@ -123,9 +130,9 @@
                     <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
                     <span>Общая стоимость: {{ order.total_amount|floatformat:2 }}</span>
                     <div>
-                        {% if order.review_set.exists %}
+
                             <a href="{% url 'review' order.id %}" class="btn btn-secondary btn-sm">Ответ на отзыв</a>
-                        {% endif %}
+
                     </div>
                 </div>
                 <div class="mt-2">

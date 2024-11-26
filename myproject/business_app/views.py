@@ -47,6 +47,7 @@ from .models import Review
 from .forms import ReviewForm, ReplyForm
 
 
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
@@ -898,23 +899,41 @@ def review(request, order_id):
 
 @salesman_required
 def reply_to_review(request, order_id):
+    logger.info("Начало обработки запроса на ответ на отзыв")
     if request.method == 'POST':
         review_id = request.POST.get('review_id')
         if review_id:
-            target_review = get_object_or_404(Review, id=review_id)
+            logger.info(f"Получен review_id: {review_id}")
+            try:
+                target_review = get_object_or_404(Review, id=review_id)
+                logger.info(f"Найден отзыв: {target_review}")
+            except Exception as e:
+                logger.error(f"Ошибка при получении отзыва: {e}")
+                return JsonResponse({'error': 'Ошибка при получении отзыва.'}, status=404)
+
             form = ReplyForm(request.POST)
             if form.is_valid():
-                reply = form.save(commit=False)
-                reply.review = target_review
-                reply.save()
-                return redirect('review', order_id=order_id)
+                logger.info("Форма ответа валидна")
+                try:
+                    reply = form.save(commit=False)
+                    reply.review = target_review
+                    reply.save()
+                    logger.info("Ответ на отзыв сохранён успешно")
+                    return redirect('review', order_id=order_id)
+                except Exception as e:
+                    logger.error(f"Ошибка при сохранении ответа: {e}")
+                    return JsonResponse({'error': 'Ошибка при сохранении ответа.'}, status=500)
             else:
-                # Возвращает JSON с ошибками валидации
+                # Логирование ошибок валидации формы
+                logger.warning(f"Ошибки валидации формы: {form.errors}")
                 return JsonResponse({'error': 'Ответ не прошел проверку.', 'form_errors': form.errors}, status=400)
         else:
             # Если review_id не передан
+            logger.warning("Не указан идентификатор отзыва")
             return JsonResponse({'error': 'Не указан идентификатор отзыва.'}, status=400)
-    return JsonResponse({'error': 'Метод не разрешен.'}, status=403)
+    else:
+        logger.warning("Метод не разрешен")
+        return JsonResponse({'error': 'Метод не разрешен.'}, status=403)
 
 
 @salesman_required
