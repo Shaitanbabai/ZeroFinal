@@ -423,3 +423,23 @@ html, body {
   color: var(--star-background);
   width: calc(var(--star-size) * attr(data-rating));
 }
+
+
+/* ==============================
+   Цвета статусов заказа
+   ============================== */
+.status-confirmed {
+    color: red;
+}
+
+.status-delivery {
+    color: orange;
+}
+
+.status-completed {
+    color: green;
+}
+
+.status-canceled {
+    color: blue;
+}

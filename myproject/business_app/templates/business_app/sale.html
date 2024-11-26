@@ -2,6 +2,22 @@
 {% load static %}
 
 {% block content %}
+<style>.status-confirmed {
+
+    color: red;
+}
+
+.status-delivery {
+    color: orange;
+}
+
+.status-completed {
+    color: green;
+}
+
+.status-canceled {
+    color: blue;
+}</style>
 <div class="container mt-4">
     <div class="row">
         <!-- Боковое навигационное меню -->
@@ -15,15 +31,14 @@
                         <li class="nav-item">
                             <a class="nav-link nav-button" href="{% url 'product_list' %}">Список товаров</a>
                         </li>
-                        <!-- Раскомментируйте, если необходимо -->
-                        <!--
+
                         <li class="nav-item">
                             <a class="nav-link nav-button" href="{% url 'all_reviews' %}">Все отзывы</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link nav-button" href="{% url 'main_page' %}">Статистика продаж</a>
+                            <a class="nav-link nav-button" href="{% url 'main_page' %}">Статистика</a>
                         </li>
-                        -->
+
                     </ul>
                 {% endif %}
             </div>
@@ -36,7 +51,21 @@
             <div class="list-group-item">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <span><strong>Заказ №{{ order.id }}</strong></span>
-                    <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
+                    <span>Статус:
+                        <strong
+                            {% if order.status == STATUS_CONFIRMED %}
+                                class="status-confirmed"
+                            {% elif order.status == STATUS_DELIVERY %}
+                                class="status-delivery"
+                            {% elif order.status == STATUS_COMPLETED %}
+                                class="status-completed"
+                            {% elif order.status == STATUS_CANCELED %}
+                                class="status-canceled"
+                            {% endif %}
+                        >
+                            {{ order.get_status_display }}
+                        </strong>
+                    </span>
                     <span><strong>Общая стоимость: {{ order.total_amount|floatformat:2 }}</strong></span>
                     <div>
                         <form method="post" id="order-form-{{ order.id }}" action="{% url 'manage_orders' order.id 'dummy_action' %}"
@@ -90,7 +119,19 @@
             <div class="list-group-item">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <span><strong>Заказ №{{ order.id }}</strong></span>
-                    <span>Статус: <strong>{{ order.get_status_display }}</strong></span>
+                    <strong
+                            {% if order.status == STATUS_CONFIRMED %}
+                                class="status-confirmed"
+                            {% elif order.status == STATUS_DELIVERY %}
+                                class="status-delivery"
+                            {% elif order.status == STATUS_COMPLETED %}
+                                class="status-completed"
+                            {% elif order.status == STATUS_CANCELED %}
+                                class="status-canceled"
+                            {% endif %}
+                        >
+                            {{ order.get_status_display }}
+                        </strong>
                     <span>Общая стоимость: {{ order.total_amount|floatformat:2 }}</span>
                     <div>
 

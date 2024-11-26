@@ -561,7 +561,7 @@ def get_order_context(user=None):
     - STATUS_COMPLETED: Заказ завершен и доставлен
     - STATUS_CANCELED: Заказ отменен
     """
-    orders = Order.objects.all()
+    orders = Order.objects.all().order_by('-status_datetime')
     if user:
         orders = orders.filter(user=user)
 
