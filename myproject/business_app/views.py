@@ -642,8 +642,7 @@ def manage_orders(request, order_id, action):
         elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
             order.status = Order.STATUS_CANCELED
         else:
-            logger.warning('Invalid action or status for order_id=%s: action=%s, status=%s', order_id, action,
-                           order.status)
+            logger.warning('Invalid action or status for order_id=%s: action=%s, status=%s', order_id, action, order.status)
 
         order.status_datetime = timezone.now()
         order.save()

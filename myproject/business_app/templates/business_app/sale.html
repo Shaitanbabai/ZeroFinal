@@ -57,44 +57,7 @@
                             <button type="submit" class="btn btn-primary btn-sm">Изменить статус</button>
                         </form>
 
-                        <script>
-                        function updateFormAction(event, orderId) {
-                            // Предотвращение стандартной отправки формы
-                            event.preventDefault();
 
-                            var selectElement = document.getElementById('action-select-' + orderId);
-                            var action = selectElement ? selectElement.value : null;
-                            var form = document.getElementById('order-form-' + orderId);
-
-                            // Проверка существования элемента формы
-                            if (!(form instanceof HTMLFormElement)) {
-                                console.error('Element is not a form:', form);
-                                return false;
-                            }
-
-                            console.log('Selected action:', action);
-
-                            // Проверяем, выбрано ли действие
-                            if (!action) {
-                                console.warn('No action selected');
-                                return false;
-                            }
-                        
-                            // Проверяем, что form.action является строкой и обновляем URL действия формы
-                            if (typeof form.action === 'string' && form.action.includes('dummy_action')) {
-                                form.action = form.action.replace('dummy_action', action);
-                                console.log('Updated form action:', form.action);
-                            } else {
-                                console.error('form.action is not a string or does not contain dummy_action:', form.action);
-                                return false;
-                            }
-
-                            // Теперь отправляем форму
-                            form.submit();
-
-                            return true;
-                        }
-                        </script>
                     </div>
                 </div>
                 <div class="mt-2">
@@ -161,4 +124,62 @@
     </div>
         </div>
 </div>
+
+<script>
+                        document.addEventListener('DOMContentLoaded', function () {
+    console.log('Script loaded: Ready to handle form actions.');
+
+    function updateFormAction(event, orderId) {
+        console.log(`updateFormAction triggered for orderId: ${orderId}`);
+
+        // Найти select и form
+        var selectElement = document.getElementById('action-select-' + orderId);
+        var form = document.getElementById('order-form-' + orderId);
+
+        // Проверка существования элементов
+        if (!selectElement) {
+            console.error('Select element not found for orderId:', orderId);
+            return false;
+        }
+
+        if (!form) {
+            console.error('Form not found for orderId:', orderId);
+            return false;
+        }
+
+        var action = selectElement.value; // Значение выбранного действия
+        event.preventDefault(); // Отключаем стандартное поведение формы
+
+        console.log('Selected action:', action);
+        console.log('Form HTML before modification:', form.outerHTML);
+
+        // Проверяем, выбрано ли действие
+        if (!action) {
+            console.warn('No action selected');
+            alert('Пожалуйста, выберите действие перед изменением статуса.');
+            return false;
+        }
+
+        // Проверяем, что form.action является строкой и корректируем URL
+        let formAction = form.getAttribute('action'); // Берём значение из атрибута action
+        console.log('Form action attribute before replace:', formAction);
+
+        if (formAction && formAction.includes('dummy_action')) {
+            form.setAttribute('action', formAction.replace('dummy_action', action)); // Заменяем dummy_action
+            console.log('Updated form action:', form.getAttribute('action'));
+        } else {
+            console.error('Form action does not contain dummy_action or is invalid:', formAction);
+            return false;
+        }
+
+        console.log('Form HTML after modification:', form.outerHTML);
+
+        console.log('Submitting form...');
+        form.submit(); // Отправляем форму
+        return true;
+    }
+
+    window.updateFormAction = updateFormAction; // Экспортируем функцию для использования в HTML
+});
+                        </script>
 {% endblock %}

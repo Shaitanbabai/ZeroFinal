@@ -46,7 +46,7 @@ class Order(models.Model):
         (STATUS_PENDING, 'Pending'),
         (STATUS_CONFIRMED, 'Confirmed'),
         (STATUS_DELIVERY, 'Delivery'),
-        (STATUS_CANCELED, 'Cancelled'),
+        (STATUS_CANCELED, 'Canceled'),
         (STATUS_COMPLETED, 'Completed'),
     ]
 
