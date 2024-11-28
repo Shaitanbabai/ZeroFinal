@@ -1,10 +1,20 @@
 import logging
+from .logger import log_error
 
-import datetime
-from datetime import timedelta
-
+# Импорты управления временем
 from django.db.models import F
 from django.utils import timezone
+import datetime
+from datetime import timedelta
+import pytz
+
+# Импорты для анализа базы данных и визуализации
+from django.db.models import Count, Sum, Max, Avg
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import io
+import base64
 
 # Импорты админки, авторизации и разграничения доступа
 from django.contrib import messages
@@ -27,7 +37,6 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.views import View
 
-from .logger import log_error
 # Импорты для создания и управления продуктом
 from .models import Product
 from .forms import CreateProductForm
@@ -46,10 +55,9 @@ from .models import Order, OrderItem
 from .models import Review
 from .forms import ReviewForm, ReplyForm
 
-
-
 # Настройка логгера
 logger = logging.getLogger(__name__)
+
 
 """ Блок классов управляющий авторизацией и регистрацией."""
 
@@ -62,14 +70,6 @@ def get_user_group_context(user):
         'is_salesman': 'salesman' in group_names
     }
     return context
-
-# def my_view(request):
-#     """ Метод отображения страницы покупки, если пользователь авторизован. """
-#     if request.user.is_authenticated:
-#         context = get_user_group_context(request.user)
-#         return render(request, 'business_app/purchase.html', context)
-#     else:
-#         return redirect('page_errors')
 
 
 def redirect_user_based_on_group(user):
@@ -527,23 +527,6 @@ def confirm_order_changes(request, order_id):
         return HttpResponseForbidden("Произошла ошибка при обработке вашего запроса в представлении confirm_order_changes.")
 
 
-# @customer_required
-# def cancel_order(request, order_id):
-#     """
-#     Отменяет заказ
-#     """
-#     # Получаем заказ пользователя с определенным ID и проверяем его статус
-#     order = get_object_or_404(Order, id=order_id, user=request.user)
-#     if order.status == Order.STATUS_CONFIRMED:
-#         # Начинаем транзакцию
-#         with transaction.atomic():
-#             order.status = Order.STATUS_CANCELED
-#             order.status_datetime = timezone.now()
-#             order.save()
-#
-#     return redirect('purchase')
-
-
 """Методы управления заказами на стороне покупателя"""
 
 
@@ -651,109 +634,122 @@ def manage_orders(request, order_id, action):
     return redirect('sale')
 
 
-# @customer_required
-# def purchase(request):
-#     # Получаем заказы текущего пользователя
-#     orders = Order.objects.filter(user=request.user).prefetch_related('orderitem_set__product').order_by(
-#         '-status_datetime')
-#
-#     # Разделяем заказы на текущие и исторические
-#     current_orders = orders.filter(status__in=[
-#         Order.STATUS_PENDING,
-#         Order.STATUS_CONFIRMED,
-#         Order.STATUS_DELIVERY
-#     ])
-#
-#     historical_orders = orders.filter(status__in=[
-#         Order.STATUS_COMPLETED,
-#         Order.STATUS_CANCELED
-#     ])
-#
-#     # Подготовка контекста для передачи в шаблон
-#     context = {
-#         'current_orders': current_orders,
-#         'historical_orders': historical_orders,
-#         'STATUS_PENDING': Order.STATUS_PENDING,
-#         'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
-#         'STATUS_DELIVERY': Order.STATUS_DELIVERY,
-#         'STATUS_COMPLETED': Order.STATUS_COMPLETED,
-#         'STATUS_CANCELED': Order.STATUS_CANCELED,
-#     }
-#
-#     return render(request, 'business_app/purchase.html', context)
+""" Методы анализа и визуализации данных"""
+@salesman_required
+def analysis_view(request):
+    if not hasattr(request, 'user'):
+        return HttpResponseServerError("Ошибка в представлении analysis_view: request не содержит атрибут user")
 
-#
-# def is_salesman (user):
-#     """Проверка, является ли пользователь членом группы 'salesman'."""
-#     try:
-#         result = user.groups.filter(name='salesman').exists()
-#         logger.debug(f"Проверка is_salesman для пользователя {user.username}: {result}")
-#         return result
-#     except Exception as e:
-#         logger.error(f"Ошибка при проверке группы пользователя: {e}")
-#         return False  # Возврат False так как мы не можем подтвердить принадлежность к группе
-#
-#
-# @salesman_required
-# def sale(request):
-#     """
-#     Доступ к панели продавца для управления заказами.
-#     """
-#     # Получаем все заказы всех покупателей
-#     orders = Order.objects.all().prefetch_related('orderitem_set__product').order_by('-status_datetime')
-#
-#     # Разделяем заказы на текущие и исторические
-#     current_orders = orders.filter(status__in=[
-#         Order.STATUS_PENDING,
-#         Order.STATUS_CONFIRMED,
-#         Order.STATUS_DELIVERY
-#     ])
-#
-#     historical_orders = orders.filter(status__in=[
-#         Order.STATUS_COMPLETED,
-#         Order.STATUS_CANCELED
-#     ])
-#
-#     # Подготовка контекста для передачи в шаблон
-#     context = {
-#         'current_orders': current_orders,
-#         'historical_orders': historical_orders,
-#         'STATUS_PENDING': Order.STATUS_PENDING,
-#         'STATUS_CONFIRMED': Order.STATUS_CONFIRMED,
-#         'STATUS_DELIVERY': Order.STATUS_DELIVERY,
-#         'STATUS_COMPLETED': Order.STATUS_COMPLETED,
-#         'STATUS_CANCELED': Order.STATUS_CANCELED,
-#     }
-#
-#     return render(request, 'business_app/sale.html', context)
-#
-#
-# @salesman_required
-# def manage_orders(request, order_id, action):
-#     """
-#     Управление заказами: изменение статусов.
-#     """
-#     # Получаем заказ по ID
-#     order = get_object_or_404(Order, id=order_id)
-#
-#     # Начинаем транзакцию
-#     with transaction.atomic():
-#         if action == 'confirm' and order.status == Order.STATUS_PENDING:
-#             order.status = Order.STATUS_CONFIRMED
-#         elif action == 'deliver' and order.status == Order.STATUS_CONFIRMED:
-#             order.status = Order.STATUS_DELIVERY
-#         elif action == 'complete' and order.status == Order.STATUS_DELIVERY:order.status = Order.STATUS_COMPLETED
-#         elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
-#             order.status = Order.STATUS_CANCELED
-#
-#         order.status_datetime = timezone.now()
-#         order.save()
-#
-#     return redirect('sale')
+    all_orders = Order.objects.all()
+
+    data = []
+    for order in all_orders:
+        for item in order.items.all():
+            data.append({
+                'order_id': order.id,
+                'product_id': item.id,
+                'total_amount': order.total_amount,
+                'user_id': order.user_id,
+                'status': order.status,
+                'status_datetime': order.status_datetime
+            })
+
+    df = pd.DataFrame(data)
+
+    status_grouped = df.groupby('status').agg(
+        order_count=pd.NamedAgg(column='order_id', aggfunc='size'),
+        total_amount=pd.NamedAgg(column='total_amount', aggfunc='sum')
+    ).reset_index()
+
+    completed_df = df[df['status'] == 'completed']
+
+    today = pd.to_datetime('today').replace(tzinfo=pytz.UTC)
+    completed_df.loc[:, 'status_datetime'] = pd.to_datetime(completed_df['status_datetime'], utc=True)
+
+    daily_data = completed_df[completed_df['status_datetime'].dt.date == today.date()]
+    weekly_data = completed_df[completed_df['status_datetime'] >= (today - pd.Timedelta(days=7))]
+    monthly_data = completed_df[completed_df['status_datetime'] >= (today - pd.Timedelta(days=30))]
+
+    def calculate_revenue_share(df):
+        # Получаем наименования товаров
+        product_names = {product.id: product.name for product in
+                         Product.objects.filter(id__in=df['product_id'].unique())}
+
+        grouped = df.groupby('product_id').agg(
+            total_revenue=pd.NamedAgg(column='total_amount', aggfunc='sum')).reset_index()
+        total_revenue = grouped['total_revenue'].sum()
+        grouped['revenue_share'] = (grouped['total_revenue'] / total_revenue) * 100
+        grouped['product_name'] = grouped['product_id'].map(product_names)  # Добавляем наименования товаров
+        return grouped
+
+    charts = []
+
+    for data, period in zip([daily_data, weekly_data, monthly_data], ['Сегодня', 'За 7 дней', 'За месяц']):
+        revenue_share = calculate_revenue_share(data)
+        chart_image = create_pie_chart(
+            {'label': revenue_share['product_name'], 'size': revenue_share['revenue_share']},
+            # Используем наименования товаров
+            f"(Итого: {revenue_share['total_revenue'].sum()})"
+        )
+        charts.append({
+            'title': f'{period}',
+            'image': chart_image,
+            'alt': f'{period} диаграмма продаж'
+        })
+
+    max_order = completed_df['total_amount'].max()
+    avg_order = completed_df['total_amount'].mean()
+    formatted_avg_order = f"{avg_order:.2f}"
+
+    top_spender = completed_df.groupby('user_id').agg(total_amount=pd.NamedAgg(column='total_amount', aggfunc='sum')).idxmax()
+    top_spender_data = completed_df[completed_df['user_id'] == top_spender[0]].iloc[0].to_dict()
+
+    order_counts = completed_df.groupby('user_id').agg(order_count=pd.NamedAgg(column='order_id', aggfunc='count'))
+
+    # Получение строки с максимальным количеством заказов
+    top_buyer = order_counts.nlargest(1, 'order_count')
+
+    # Преобразование результата в словарь
+    top_buyer_data = {
+        'user_id': top_buyer.index[0],
+        'order_count': top_buyer['order_count'].iloc[0]
+    }
+
+    context = {
+        'grouped_data': df.to_dict(orient='records'),
+        'status_grouped': status_grouped.to_dict(orient='records'),
+        'max_order': max_order,
+        'formatted_avg_order': formatted_avg_order,
+        'top_spender': top_spender_data,
+        'top_buyer': top_buyer_data,
+        'charts': charts,
+    }
+
+    return render(request, 'business_app/analysis.html', context)
+
+
+# Визуализация данных
+def create_pie_chart(data, title):
+    labels = data['label']
+    sizes = data['size']
+
+    fig, ax = plt.subplots()
+    ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')
+    plt.title(title)
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    image_png = buf.getvalue()
+    buf.close()
+
+    return base64.b64encode(image_png).decode('utf-8')
 
 
 @salesman_required
 def product_list(request):
+
     """
     Метод отображения списка продуктов. В качестве параметра передается список продуктов.
     """
@@ -897,7 +893,7 @@ def review(request, order_id):
 
 
 @salesman_required
-def reply_to_review(request, order_id):
+def reply_to_review(request, review_id):
     logger.info("Начало обработки запроса на ответ на отзыв")
     if request.method == 'POST':
         review_id = request.POST.get('review_id')
@@ -918,7 +914,7 @@ def reply_to_review(request, order_id):
                     reply.review = target_review
                     reply.save()
                     logger.info("Ответ на отзыв сохранён успешно")
-                    return redirect('review', order_id=order_id)
+                    return redirect(reverse('all_reviews'))
                 except Exception as e:
                     logger.error(f"Ошибка при сохранении ответа: {e}")
                     return JsonResponse({'error': 'Ошибка при сохранении ответа.'}, status=500)
@@ -947,6 +943,7 @@ def all_reviews(request):
 
     context = {
         'reviews': reviews
+
     }
     return render(request, 'business_app/all_reviews.html', context)
 

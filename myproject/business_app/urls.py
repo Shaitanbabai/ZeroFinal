@@ -32,6 +32,8 @@ urlpatterns = [
     path('sale/', views.sale, name='sale'),  # Страница "Мои продажи", интерфейс продавца
     path('manage_orders/<int:order_id>/<str:action>/', views.manage_orders, name='manage_orders'),  # Маршрут для управления заказами
     path('products/', views.product_list, name='product_list'),  # Маршрут к шаблону продукта
+    path('analysis/', views.analysis_view, name='analysis'),  # Маршрут к шаблону аналитики
+
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),  # Маршрут для просмотра выбранного продукта
     path('create/', views.create_product, name='create_product'),  # Маршрут для создания продукта
     path('product/<int:product_id>/update/', views.update_product, name='update_product'),  # Маршрут для обновления продукта

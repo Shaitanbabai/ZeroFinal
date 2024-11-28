@@ -27,3 +27,12 @@ def multiply(value, arg):
 @register.filter
 def in_list(value, the_list):
     return value in the_list
+
+
+@register.filter(name='currency')
+def currency(value):
+    try:
+        # Используем пробел как разделитель тысяч и добавляем символ рубля
+        return "{:,.2f} ₽".format(float(value)).replace(',', ' ')
+    except (ValueError, TypeError):
+        return value

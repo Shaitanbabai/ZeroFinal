@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load form_tags %}  <!-- Загрузка пользовательских фильтров -->
+
+{% block content %}
+    <!-- Группировка заказов -->
+    <h3>Группировка заказов по статусу</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Статус</th>
+                <th>Число заказов</th>
+                <th>Сумма</th>
+            </tr>
+        </thead>
+        <tbody>
+    {% for entry in status_grouped %}
+    <tr>
+        <td>{{ entry.status }}</td>
+        <td>{{ entry.order_count }}</td>
+        <td>{{ entry.total_amount|currency }}</td>  <!-- Применение фильтра для форматирования суммы -->
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+
+    <!-- Максимальный заказ и средний чек -->
+    <h4>Максимальный заказ и средний чек</h4>
+    <p>Максимальный заказ: {{ max_order|currency }}</p>  <!-- Применение фильтра -->
+    <p>Средний чек: {{ formatted_avg_order|currency }}</p>  <!-- Применение фильтра -->
+
+    <!-- Покупатель с наибольшей суммой и числом заказов -->
+    <h4>Лучшие покупатели</h4>
+    <p>Покупатель с наибольшей суммой: ID {{ top_spender.user_id }}, Сумма: {{ top_spender.total_amount|currency }}</p>  <!-- Применение фильтра -->
+    <p>Покупатель с наибольшим числом заказов: ID {{ top_buyer.user_id }}, Количество заказов: {{ top_buyer.order_count }}</p>
+
+    <!-- Диаграммы -->
+    <div class="container">
+    <h4>Анализ продаж</h4>
+    <div class="row">
+        {% for chart in charts %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>{{ chart.title }}</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="data:image/png;base64,{{ chart.image }}" alt="{{ chart.alt }}" class="img-fluid chart-image">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
