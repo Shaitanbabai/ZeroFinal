@@ -54,13 +54,22 @@
 <h1 class="page-header">Все отзывы</h1>
 <div class="reviews-container">
     {% for review in reviews %}
-        <div class="review">
-            <p class="review-header">
-                <span>{{ review.user_first_name }}</span>
-                <span>{{ review.pub_date|date:"d.m.Y" }}, Рейтинг: {{ review.rating }}</span>
-            </p>
-            <p class="review-content">{{ review.content }}</p>
-        </div>
-    {% endfor %}
+    <div class="review">
+        <p class="review-header">
+            <span>{{ review.user_first_name }}</span>
+            <span>{{ review.pub_date|date:"d.m.Y" }}, Рейтинг: {{ review.rating }}</span>
+        </p>
+        <p class="review-content">{{ review.content }}</p>
+        {% if review.reply %}
+            <div class="reply" style="margin-left: 60px;">
+                <p class="reply-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Ответ с любовью от магазина FloverLover</span>
+                    <span class="reply-date">{{ review.reply.pub_date|date:"d.m.Y" }}</span>
+                </p>
+                <p class="reply-content">{{ review.reply.content }}</p>
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}
 </div>
 {% endblock %}

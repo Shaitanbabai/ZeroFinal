@@ -440,7 +440,7 @@ def edit_order(request, order_id):
     )
 
     if created:
-        # Копируем товары из оригинального заказа в временный
+        # Копируем товары из оригинального заказа временный
         for item in original_order.orderitem_set.all():
             OrderItem.objects.create(order=temporary_order, product=item.product, quantity=item.quantity)
 
@@ -747,6 +747,8 @@ def create_pie_chart(data, title):
     return base64.b64encode(image_png).decode('utf-8')
 
 
+""" Методы создания и управления товарами """
+
 @salesman_required
 def product_list(request):
 
@@ -896,36 +898,35 @@ def review(request, order_id):
 def reply_to_review(request, review_id):
     logger.info("Начало обработки запроса на ответ на отзыв")
     if request.method == 'POST':
-        review_id = request.POST.get('review_id')
-        if review_id:
-            logger.info(f"Получен review_id: {review_id}")
-            try:
-                target_review = get_object_or_404(Review, id=review_id)
-                logger.info(f"Найден отзыв: {target_review}")
-            except Exception as e:
-                logger.error(f"Ошибка при получении отзыва: {e}")
-                return JsonResponse({'error': 'Ошибка при получении отзыва.'}, status=404)
+        try:
+            target_review = get_object_or_404(Review, id=review_id)
+            logger.info(f"Найден отзыв: {target_review}")
+        except Exception as e:
+            logger.error(f"Ошибка при получении отзыва: {e}")
+            return JsonResponse({'error': 'Ошибка при получении отзыва.'}, status=404)
 
-            form = ReplyForm(request.POST)
-            if form.is_valid():
-                logger.info("Форма ответа валидна")
-                try:
-                    reply = form.save(commit=False)
-                    reply.review = target_review
-                    reply.save()
-                    logger.info("Ответ на отзыв сохранён успешно")
-                    return redirect(reverse('all_reviews'))
-                except Exception as e:
-                    logger.error(f"Ошибка при сохранении ответа: {e}")
-                    return JsonResponse({'error': 'Ошибка при сохранении ответа.'}, status=500)
-            else:
-                # Логирование ошибок валидации формы
-                logger.warning(f"Ошибки валидации формы: {form.errors}")
-                return JsonResponse({'error': 'Ответ не прошел проверку.', 'form_errors': form.errors}, status=400)
+        # Проверка, существует ли уже ответ
+        if target_review.reply is not None:
+            logger.warning("Ответ на данный отзыв уже существует.")
+            return JsonResponse({'error': 'Ответ на данный отзыв уже существует.'}, status=400)
+
+        form = ReplyForm(request.POST)
+        if form.is_valid():
+            logger.info("Форма ответа валидна")
+            try:
+                reply = form.save(commit=False)
+                reply.save()
+                target_review.reply = reply
+                target_review.save()
+                logger.info("Ответ на отзыв сохранён успешно")
+                return redirect(reverse('all_reviews'))
+            except Exception as e:
+                logger.error(f"Ошибка при сохранении ответа: {e}")
+                return JsonResponse({'error': 'Ошибка при сохранении ответа.'}, status=500)
         else:
-            # Если review_id не передан
-            logger.warning("Не указан идентификатор отзыва")
-            return JsonResponse({'error': 'Не указан идентификатор отзыва.'}, status=400)
+            # Логирование ошибок валидации формы
+            logger.warning(f"Ошибки валидации формы: {form.errors}")
+            return JsonResponse({'error': 'Ответ не прошел проверку.', 'form_errors': form.errors}, status=400)
     else:
         logger.warning("Метод не разрешен")
         return JsonResponse({'error': 'Метод не разрешен.'}, status=403)
@@ -939,12 +940,15 @@ def delete_review(request, review_id):
 
 
 def all_reviews(request):
-    reviews = Review.objects.all().select_related('user').order_by('-pub_date').annotate(user_first_name=F('user__first_name'))
+    # Используйте только те данные, которые вам действительно нужны
+    reviews = Review.objects.all().select_related('user').order_by('-pub_date').annotate(
+        user_first_name=F('user__first_name')
+        # Удалите salesman_first_name, если не используете salesman в модели
+    )
 
-    context = {
-        'reviews': reviews
+    context = {'reviews': reviews
+               }
 
-    }
     return render(request, 'business_app/all_reviews.html', context)
 
 

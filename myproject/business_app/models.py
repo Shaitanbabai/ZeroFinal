@@ -80,16 +80,18 @@ class Order(models.Model):
 class Review(models.Model):
     objects = None
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    order_id = models.IntegerField()  # Верните обратно в IntegerField
+    order_id = models.IntegerField()
     content = models.TextField(max_length=240)
     rating = models.IntegerField()
     pub_date = models.DateTimeField(auto_now_add=True)
+    # Один заказ --> Один отзыв --> Один ответ
+    reply = models.OneToOneField('Reply', null=True, blank=True, on_delete=models.SET_NULL, related_name='review')
 
     def __str__(self):
         return f"Review by {self.user.username} for order {self.order_id}"
 
 class Reply(models.Model):
-    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='replies')
+    # review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='replies')  # >1 ответа на отзыв
     content = models.TextField(max_length=240)
     pub_date = models.DateTimeField(auto_now_add=True)
 
