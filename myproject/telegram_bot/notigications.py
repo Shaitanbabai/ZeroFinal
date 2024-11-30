@@ -1,17 +1,31 @@
+import logging
 import asyncio
+import os
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 from aiogram import Bot, Dispatcher, types
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types import BotCommand
+
 from business_app.models import Order
-from .utils import get_telegram_bot_token
 from .models import TelegramUser
 
+# Установим уровень логирования
+logging.basicConfig(level=logging.INFO)
+
 # Создаем экземпляр бота
-bot = Bot(token=get_telegram_bot_token(), parse_mode=types.ParseMode.HTML)
+bot = Bot(token=os.getenv('TELEGRAM_API_TOKEN'), parse_mode='HTML')
 dp = Dispatcher(bot)
-dp.middleware.setup(LoggingMiddleware())
+
+# Пример собственной реализации middleware для логирования
+class SimpleLoggingMiddleware:
+    async def __call__(self, handler, event, data):
+        logging.info(f"Handling event: {event}")
+        return await handler(event, data)
+
+# Подключение middleware для логирования
+dp.message.middleware(SimpleLoggingMiddleware())
 
 
 # Функция для отправки сообщения в Telegram
