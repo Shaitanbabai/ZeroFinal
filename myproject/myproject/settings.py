@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'bootstrap4',
     # 'templatetags.form_tags'
     'business_app',
+    'telegram_bot',
 ]
 
 SITE_ID = 1
@@ -136,6 +137,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'aiogram.contrib.middlewares',
+
 ]
 
 ROOT_URLCONF = 'myproject.urls'

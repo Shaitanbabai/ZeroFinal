@@ -5,11 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="08671c6b-3278-40d9-8cb2-83a2702050e3" name="Changes" comment="Из карточки товара в форму заказа не передаются данные товара.">
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/keyboards.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/notigications.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/reports.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/untils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/business_app/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/business_app/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/business_app/templates/business_app/all_reviews.html" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/templates/business_app/all_reviews.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/business_app/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/business_app/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/myproject/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/myproject/settings.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,8 +26,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="HTML File" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>

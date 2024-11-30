@@ -381,6 +381,7 @@ def create_order(request):
                 user=request.user,
                 phone=cart_form.cleaned_data['phone'],
                 address=cart_form.cleaned_data['address'],
+                telegram_key=cart_form.cleaned_data.get('telegram_key', ''),
                 comment=cart_form.cleaned_data.get('comment', ''),
                 status=Order.STATUS_CONFIRMED,
                 status_datetime=timezone.now(),

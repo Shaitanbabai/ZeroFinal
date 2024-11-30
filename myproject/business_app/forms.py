@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm as AllauthLoginForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserChangeForm
+from django.core.validators import RegexValidator
 from .models import Review, Reply
 # from django.forms import inlineformset_factory
 from .models import Order  # OrderItem
@@ -115,21 +116,50 @@ class CreateProductForm(forms.ModelForm):
 Задаются параметры, которые будут использоваться в форме и структура таблицы с заказами
 """
 class CartForm(forms.ModelForm):
+    phone = forms.CharField(
+        label='Телефон получателя',
+        widget=forms.TextInput(attrs={
+            'placeholder': '+71234567890',
+            'required': True
+        }),
+        validators=[RegexValidator(regex=r'^\+?\d{10,15}$', message='Введите корректный номер телефона.')]
+    )
+    address = forms.CharField(
+        label='Адрес доставки',
+        widget=forms.Textarea(attrs={
+            'maxlength': 120,
+            'placeholder': 'Город, Улица, Дом, Подъезд, Квартира/Офис',
+            'required': True
+        })
+    )
+    comment = forms.CharField(
+        label='Комментарий',
+        widget=forms.Textarea(attrs={
+            'maxlength': 120,
+            'placeholder': 'Комментарии к заказу для магазина, курьера или получателя',
+            'required': False
+        }),
+        required=False
+    )
+    telegram_key = forms.CharField(
+        label='Ключ Telegram',
+        widget=forms.TextInput(attrs={
+            'maxlength': 100,
+            'placeholder': 'Введите ваш Telegram Key, если хотите отслеживать заказ в боте',
+            'required': False
+        }),
+        required=False
+    )
+
     class Meta:
         model = Order
         fields = ['phone', 'address', 'comment', 'telegram_key']
-        widgets = {
-            'phone': forms.TextInput(attrs={'placeholder': '+71234567890', 'required': True}),
-            'address': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Город, Улица, Дом, Подъезд, Квартира/Офис', 'required': True}),
-            'comment': forms.Textarea(attrs={'maxlength': 120, 'placeholder': 'Комментарии к заказу для магазина, курьера или получателя', 'required': False}),
-            'telegram_key': forms.TextInput(attrs={'maxlength': 120, 'placeholder': 'Введите ваш Telegram Key, если хотите отслеживать заказ в боте', 'required': True}),
-        }
-        labels = {
-            'phone': 'Телефон получателя',
-            'address': 'Адрес доставки',
-            'comment': 'Комментарий',
-            'telegram_key': 'Ключ Telegram',
-        }
+
+    def clean_telegram_key(self):
+        telegram_key = self.cleaned_data.get('telegram_key')
+        if telegram_key and not telegram_key.startswith('@'):
+            raise forms.ValidationError("Telegram Key должен начинаться с @")
+        return telegram_key
 
 
 class ReviewForm(forms.ModelForm):
