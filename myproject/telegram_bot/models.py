@@ -2,6 +2,7 @@ from django.db import models
 
 
 class TelegramUser(models.Model):
+    objects = None
     chat_id = models.CharField(max_length=50, unique=True)
     username = models.CharField(max_length=50, null=True, blank=True)
 
