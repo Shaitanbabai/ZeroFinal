@@ -5,6 +5,9 @@ import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import Group
+
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.types import BotCommand
 
@@ -45,6 +48,10 @@ async def send_telegram_message(chat_id, message):
             message (str): Сообщение для отправки.
         """
     await bot.send_message(chat_id=chat_id, text=message)
+
+
+""" Информер для пользователей о статусе конкретного заказа. """
+
 
 @receiver(post_save, sender=Order)
 def notify_order_status_change(sender, instance, created, **kwargs):  # noqa: F841
@@ -88,14 +95,87 @@ async def subscribe(message: types.Message):
     else:
         await message.reply("Не найден заказ, связанный с вашим именем пользователя.")
 
+
+""" Информер для продавцов о создании и изменении заказов. """
+
+
+@router.message(commands=['login'])
+async def login(message: types.Message):
+    # Пример команды: /login username password
+    try:
+        _, username, password = message.text.split()
+    except ValueError:
+        await message.reply("Используйте формат: /login username password")
+        return
+
+    user = authenticate(username=username, password=password)
+
+    if user is not None:
+        if Group.objects.get(name='salesman') in user.groups.all():
+            TelegramUser.objects.update_or_create(
+                username=f"@{message.from_user.username}",
+                defaults={'is_authenticated': True, 'chat_id': message.chat.id}
+            )
+            await message.reply("Вы успешно авторизовались как salesman.")
+        else:
+            await message.reply("У вас нет доступа к функционалу salesman.")
+    else:
+        await message.reply("Неправильный логин или пароль.")
+
+
+@receiver(post_save, sender=Order)
+def notify_salesman_of_order_change(sender, instance, created, **kwargs):
+    message = f"Новый заказ создан: {instance.id}. Детали: {instance.details}" if created else f"Статус заказа {instance.id} изменился на {instance.status}."
+
+    # Получаем всех авторизованных пользователей salesman
+    salesmen = TelegramUser.objects.filter(is_authenticated=True)
+
+    for salesman in salesmen:
+        asyncio.run(send_telegram_message(salesman.chat_id, message))
+
+
+""" Базовые команды бота и управление командами. """
+
+
+@router.message(commands=['start'])
+async def start(message: types.Message):
+    """Обработка команды /start."""
+    welcome_text = (
+        "Добро пожаловать в бот-информатор магазина FlowerLover! Вот список доступных команд:\n"
+        "/start - Начать использование бота\n"
+        "/help - Показать меню команд\n"
+        "/login - Авторизация (только для продавцов)\n"
+        "/subscribe - Подписаться на уведомления по заказу"
+    )
+    await message.reply(welcome_text)
+
+@router.message(commands=['help'])
+async def help_command(message: types.Message):
+    """Обработка команды /help."""
+    help_text = (
+        "Список доступных команд:\n"
+        "/start - Начать использование бота\n"
+        "/help - Показать меню команд\n"
+        "/login - Авторизация (только для продавцов)\n"
+        "/subscribe - Подписаться на уведомления по заказу"
+    )
+    await message.reply(help_text)
+
+
 async def set_commands(telegram_bot: Bot):
     """Устанавливает доступные команды для бота в Telegram.
 
-     Args:
-         telegram_bot (Bot): Экземпляр бота.
-     """
-    commands = [BotCommand(command="/subscribe", description="Подписаться на уведомления по заказу")]
+    Args:
+        telegram_bot (Bot): Экземпляр бота.
+    """
+    commands = [
+        BotCommand(command="/start", description="Начать использование бота"),
+        BotCommand(command="/help", description="Показать меню команд"),
+        BotCommand(command="/login", description="Авторизация (формат: /login username password)"),
+        BotCommand(command="/subscribe", description="Подписаться на уведомления по заказу"),
+    ]
     await telegram_bot.set_my_commands(commands)
+
 
 async def main():
     await set_commands(bot)
