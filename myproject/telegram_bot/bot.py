@@ -6,7 +6,7 @@ from aiogram.types import BotCommand
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
 from dotenv import load_dotenv
-from handlers import register_handlers
+from telegram_bot.handlers import register_handlers
 
 
 # Загрузка переменных окружения из .env файла

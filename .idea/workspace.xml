@@ -8,7 +8,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/management/commands/runbot.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/management/commands/runbot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/reports.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/reports.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
