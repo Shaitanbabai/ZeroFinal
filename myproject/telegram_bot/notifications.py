@@ -11,8 +11,7 @@ from aiogram import Router, types
 
 from business_app.models import Order
 from models import TelegramUser
-from bot import bot, dp  # Импортируем инициализированные объекты
-
+from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
 
 logging.basicConfig(level=logging.INFO)
 
@@ -62,7 +61,7 @@ async def subscribe(message: types.Message):
 
 
 @receiver(post_save, sender=Order)
-def notify_salesman_of_order_change(sender, instance, created, **kwargs):
+def notify_salesman_of_order_change(_sender, instance, created, **_kwargs):
     """Информирует продавцов о создании или изменении заказа."""
     message = f"Новый заказ создан: {instance.id}. Детали: {instance.details}" if created else f"Статус заказа {instance.id} изменился на {instance.status}."
 
@@ -113,7 +112,7 @@ async def send_telegram_message(chat_id, message):
 
 
 @receiver(post_save, sender=Order)
-def notify_order_status_change(sender, instance, created, **kwargs):
+def notify_order_status_change(_sender, instance, created, **_kwargs):
     """Отправляет уведомления в Telegram о создании или изменении статуса заказа."""
     telegram_username = instance.telegram_key
     if telegram_username:

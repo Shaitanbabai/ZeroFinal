@@ -3,7 +3,7 @@ from aiogram import types, Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
-from reports import generate_report
+from telegram_bot.reports import generate_report
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
