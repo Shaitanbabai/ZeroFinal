@@ -72,6 +72,7 @@ async def set_commands(telegram_bot: Bot):
 
     await telegram_bot.set_my_commands(commands)
 
+
 async def main():
     await set_commands(bot)
     await dp.start_polling(bot)

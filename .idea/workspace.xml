@@ -5,9 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="08671c6b-3278-40d9-8cb2-83a2702050e3" name="Changes" comment="Из карточки товара в форму заказа не передаются данные товара.">
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/management/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/management/commands/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/myproject/telegram_bot/management/commands/runbot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,19 +61,19 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
-    "DefaultHtmlFileTemplate": "HTML File",
-    "Python.bot.executor": "Run",
-    "Python.manage.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "com.codeium.enabled": "true",
-    "git-widget-placeholder": "master",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Python.bot.executor&quot;: &quot;Run&quot;,
+    &quot;Python.manage.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\shrio\PycharmProjects\ZeroFinalNew\myproject\business_app\templates\business_app" />
