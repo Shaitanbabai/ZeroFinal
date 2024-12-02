@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="08671c6b-3278-40d9-8cb2-83a2702050e3" name="Changes" comment="Из карточки товара в форму заказа не передаются данные товара.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/handlers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,7 +80,7 @@
       <recent name="C:\Users\shrio\PycharmProjects\ZeroFinal" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.bot">
+  <component name="RunManager" selected="Python.manage">
     <configuration name="bot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ZeroFinalNew" />
       <option name="ENV_FILES" value="" />
@@ -147,8 +149,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.bot" />
         <item itemvalue="Python.manage" />
+        <item itemvalue="Python.bot" />
       </list>
     </recent_temporary>
   </component>

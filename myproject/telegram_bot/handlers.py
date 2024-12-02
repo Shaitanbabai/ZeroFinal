@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 # Создание роутера для обработки сообщений и событий
 report_router = Router()
 
+
+""" Ротуреы обработки отчетов о продажах """
+
 class ReportStates(StatesGroup):
     """Класс состояний для выбора периода отчета."""
     start_date = State()

@@ -33,6 +33,9 @@ register_handlers(main_router)
 __all__ = ['bot', 'dp', 'main_router']
 
 
+""" Роутеры обработки базовых команд """
+
+
 # Обработка команды /start
 @main_router.message(commands=['start'])
 async def send_welcome(message: types.Message):

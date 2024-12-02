@@ -39,29 +39,7 @@ class SimpleLoggingMiddleware:
 dp.message.middleware(SimpleLoggingMiddleware())
 
 
-async def send_telegram_message(chat_id, message):
-    """Отправляет сообщение в Telegram пользователю."""
-    try:
-        await bot.send_message(chat_id=chat_id, text=message)
-    except Exception as e:
-        logging.error(f"Failed to send message to {chat_id}: {e}")
-
-
-@receiver(post_save, sender=Order)
-def notify_order_status_change(sender, instance, created, **kwargs):
-    """Отправляет уведомления в Telegram о создании или изменении статуса заказа."""
-    telegram_username = instance.telegram_key
-    if telegram_username:
-        message = "Ваш заказ создан. Подпишитесь для отслеживания статуса." if created else f"Статус вашего заказа изменился на {instance.status}."
-
-        try:
-            user = TelegramUser.objects.filter(username=telegram_username).first()
-            if user:
-                asyncio.run(send_telegram_message(user.chat_id, message))
-        except Exception as e:
-            logging.error(f"Error notifying user {telegram_username}: {e}")
-
-
+""" Роутеры для информирования клиента """
 @router.message(commands=['subscribe'])
 async def subscribe(message: types.Message):
     """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
@@ -81,6 +59,22 @@ async def subscribe(message: types.Message):
     except Exception as e:
         logging.error(f"Error subscribing user {telegram_username}: {e}")
         await message.reply("Произошла ошибка при подписке.")
+
+
+@receiver(post_save, sender=Order)
+def notify_salesman_of_order_change(sender, instance, created, **kwargs):
+    """Информирует продавцов о создании или изменении заказа."""
+    message = f"Новый заказ создан: {instance.id}. Детали: {instance.details}" if created else f"Статус заказа {instance.id} изменился на {instance.status}."
+
+    try:
+        salesmen = TelegramUser.objects.filter(is_authenticated=True)
+        for salesman in salesmen:
+            asyncio.run(send_telegram_message(salesman.chat_id, message))
+    except Exception as e:
+        logging.error(f"Error notifying salesmen: {e}")
+
+
+""" Роутеры для информирования продавца """
 
 
 @router.message(commands=['login'])
@@ -110,14 +104,24 @@ async def login(message: types.Message):
         await message.reply("Произошла ошибка во время авторизации.")
 
 
-@receiver(post_save, sender=Order)
-def notify_salesman_of_order_change(sender, instance, created, **kwargs):
-    """Информирует продавцов о создании или изменении заказа."""
-    message = f"Новый заказ создан: {instance.id}. Детали: {instance.details}" if created else f"Статус заказа {instance.id} изменился на {instance.status}."
-
+async def send_telegram_message(chat_id, message):
+    """Отправляет сообщение в Telegram пользователю."""
     try:
-        salesmen = TelegramUser.objects.filter(is_authenticated=True)
-        for salesman in salesmen:
-            asyncio.run(send_telegram_message(salesman.chat_id, message))
+        await bot.send_message(chat_id=chat_id, text=message)
     except Exception as e:
-        logging.error(f"Error notifying salesmen: {e}")
+        logging.error(f"Failed to send message to {chat_id}: {e}")
+
+
+@receiver(post_save, sender=Order)
+def notify_order_status_change(sender, instance, created, **kwargs):
+    """Отправляет уведомления в Telegram о создании или изменении статуса заказа."""
+    telegram_username = instance.telegram_key
+    if telegram_username:
+        message = "Ваш заказ создан. Подпишитесь для отслеживания статуса." if created else f"Статус вашего заказа изменился на {instance.status}."
+
+        try:
+            user = TelegramUser.objects.filter(username=telegram_username).first()
+            if user:
+                asyncio.run(send_telegram_message(user.chat_id, message))
+        except Exception as e:
+            logging.error(f"Error notifying user {telegram_username}: {e}")
