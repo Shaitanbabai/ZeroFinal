@@ -8,16 +8,20 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
 from aiogram import Router, types
+from aiogram.filters import Command
+
+from asgiref.sync import async_to_sync
 
 from business_app.models import Order
-from models import TelegramUser
+from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
+
 
 logging.basicConfig(level=logging.INFO)
 
 # Используем уже инициализированные объекты bot и dp
 router = Router()
-dp.include_router(router)
+
 
 class SimpleLoggingMiddleware:
     """
@@ -39,7 +43,9 @@ dp.message.middleware(SimpleLoggingMiddleware())
 
 
 """ Роутеры для информирования клиента """
-@router.message(commands=['subscribe'])
+
+
+@router.message(Command("subscribe"))
 async def subscribe(message: types.Message):
     """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
     chat_id = message.chat.id
@@ -68,7 +74,7 @@ def notify_salesman_of_order_change(_sender, instance, created, **_kwargs):
     try:
         salesmen = TelegramUser.objects.filter(is_authenticated=True)
         for salesman in salesmen:
-            asyncio.run(send_telegram_message(salesman.chat_id, message))
+            async_to_sync(send_telegram_message)(salesman.chat_id, message)
     except Exception as e:
         logging.error(f"Error notifying salesmen: {e}")
 
@@ -76,9 +82,9 @@ def notify_salesman_of_order_change(_sender, instance, created, **_kwargs):
 """ Роутеры для информирования продавца """
 
 
-@router.message(commands=['login'])
+@router.message(Command("login"))
 async def login(message: types.Message):
-    """Обрабатывает команду /login для авторизации пользователя."""
+    logging.info(f"Received login command from {message.from_user.username}")
     try:
         _, username, password = message.text.split()
     except ValueError:
@@ -88,6 +94,7 @@ async def login(message: types.Message):
     try:
         user = authenticate(username=username, password=password)
         if user is not None:
+            logging.info(f"User {username} authenticated successfully")
             if Group.objects.get(name='salesman') in user.groups.all():
                 TelegramUser.objects.update_or_create(
                     username=f"@{message.from_user.username}",
@@ -124,3 +131,7 @@ def notify_order_status_change(_sender, instance, created, **_kwargs):
                 asyncio.run(send_telegram_message(user.chat_id, message))
         except Exception as e:
             logging.error(f"Error notifying user {telegram_username}: {e}")
+
+
+def register_notifications(main_router: Router):
+    main_router.include_router(router)

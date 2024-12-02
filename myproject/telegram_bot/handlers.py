@@ -19,7 +19,7 @@ class ReportStates(StatesGroup):
     start_date = State()
     end_date = State()
 
-@report_router.callback_query(F.data == 'report_date_range', state='*')
+@report_router.callback_query(F.data == 'report_date_range')
 async def report_date_range_handler(callback_query: types.CallbackQuery, state: FSMContext):
     """Обрабатывает начало выбора диапазона дат для отчета.
 
@@ -38,58 +38,53 @@ async def report_date_range_handler(callback_query: types.CallbackQuery, state: 
         logger.error(f"Ошибка в report_date_range_handler: {e}")
         await callback_query.message.answer("Произошла ошибка при выборе начальной даты. Попробуйте снова.")
 
-@report_router.callback_query(SimpleCalendarCallback.filter(), state=ReportStates.start_date)
+
+@report_router.callback_query(SimpleCalendarCallback.filter())
 async def process_start_date(callback_query: types.CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
-    """Обрабатывает выбор начальной даты.
+    current_state = await state.get_state()
 
-    Args:
-        callback_query (types.CallbackQuery): Объект callback запроса.
-        callback_data (SimpleCalendarCallback): Данные, полученные из календаря.
-        state (FSMContext): Контекст конечного автомата состояний.
-    """
-    try:
-        selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
-        if selected:
-            await state.update_data(start_date=date)
-            await callback_query.message.answer(
-                "Выберите конечную дату:",
-                reply_markup=await SimpleCalendar().start_calendar()
-            )
-            await state.set_state(ReportStates.end_date)
-            logger.info(f"Начальная дата выбрана: {date}")
-    except Exception as e:
-        logger.error(f"Ошибка в process_start_date: {e}")
-        await callback_query.message.answer("Произошла ошибка при выборе начальной даты. Попробуйте снова.")
+    if current_state == ReportStates.start_date:
+        """Обрабатывает выбор начальной даты."""
+        try:
+            selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+            if selected:
+                await state.update_data(start_date=date)
+                await callback_query.message.answer(
+                    "Выберите конечную дату:",
+                    reply_markup=await SimpleCalendar().start_calendar()
+                )
+                await state.set_state(ReportStates.end_date)
+                logger.info(f"Начальная дата выбрана: {date}")
+        except Exception as e:
+            logger.error(f"Ошибка в process_start_date: {e}")
+            await callback_query.message.answer("Произошла ошибка при выборе начальной даты. Попробуйте снова.")
 
-@report_router.callback_query(SimpleCalendarCallback.filter(), state=ReportStates.end_date)
+@report_router.callback_query(SimpleCalendarCallback.filter())
 async def process_end_date(callback_query: types.CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
-    """Обрабатывает выбор конечной даты и генерацию отчета.
+    current_state = await state.get_state()
 
-    Args:
-        callback_query (types.CallbackQuery): Объект callback запроса.
-        callback_data (SimpleCalendarCallback): Данные, полученные из календаря.
-        state (FSMContext): Контекст конечного автомата состояний.
-    """
-    try:
-        selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
-        if selected:
-            data = await state.get_data()
-            start_date = data['start_date']
-            end_date = date
-            await state.clear()
+    if current_state == ReportStates.end_date:
+        """Обрабатывает выбор конечной даты и генерацию отчета."""
+        try:
+            selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+            if selected:
+                data = await state.get_data()
+                start_date = data['start_date']
+                end_date = date
+                await state.clear()
 
-            # Попытка генерации отчета
-            try:
+                # Генерация отчета
                 text_report, chart = generate_report(start_date, end_date)
+
+                # Отправка текстового отчета пользователю
                 await callback_query.message.answer(text_report)
-                await callback_query.message.reply_photo(chart)
-                logger.info(f"Отчет успешно сгенерирован с {start_date} по {end_date}")
-            except Exception as e:
-                logger.error(f"Ошибка при генерации отчета: {e}")
-                await callback_query.message.answer("Произошла ошибка при генерации отчета. Попробуйте снова.")
-    except Exception as e:
-        logger.error(f"Ошибка в process_end_date: {e}")
-        await callback_query.message.answer("Произошла ошибка при выборе конечной даты. Попробуйте снова.")
+
+                # Отправка диаграммы пользователю
+                await callback_query.message.answer_photo(photo=chart)
+
+        except Exception as e:
+            logger.error(f"Ошибка в process_end_date: {e}")
+            await callback_query.message.answer("Произошла ошибка при выборе конечной даты. Попробуйте снова.")
 
 
 # Функция для регистрации всех обработчиков

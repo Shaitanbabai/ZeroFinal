@@ -6,7 +6,6 @@ from business_app.models import Order, Product
 from datetime import datetime, timedelta
 import pytz
 
-
 logger = logging.getLogger(__name__)
 
 def fetch_order_data(start_date, end_date):
