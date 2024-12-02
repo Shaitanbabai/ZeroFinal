@@ -9,9 +9,9 @@ from django.contrib.auth.models import Group
 
 from aiogram import Router, types
 
-from myproject.business_app.models import Order
-from myproject.telegram_bot.models import TelegramUser
-from myproject.telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
+from business_app.models import Order
+from models import TelegramUser
+from bot import bot, dp  # Импортируем инициализированные объекты
 
 
 logging.basicConfig(level=logging.INFO)

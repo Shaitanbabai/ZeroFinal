@@ -2,10 +2,9 @@ import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from myproject.business_app.models import Order, Product
+from business_app.models import Order, Product
 from datetime import datetime, timedelta
 import pytz
-
 
 logger = logging.getLogger(__name__)
 
