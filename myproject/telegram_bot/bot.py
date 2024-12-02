@@ -8,6 +8,7 @@ from aiogram.types import Message
 from dotenv import load_dotenv
 from handlers import register_handlers
 
+
 # Загрузка переменных окружения из .env файла
 load_dotenv()
 
