@@ -10,7 +10,6 @@ from aiogram.types import Message
 from dotenv import load_dotenv
 from telegram_bot.handlers import register_handlers
 
-
 # Загрузка переменных окружения из .env файла
 load_dotenv()
 
@@ -28,10 +27,12 @@ logging.basicConfig(
 
 # Инициализация бота с использованием DefaultBotProperties
 bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
+logging.info("Bot успешно инициализирован")
 
 # Инициализация диспетчера
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+logging.info("Dispatcher успешно инициализирован")
 
 # Создаем и добавляем главный роутер
 main_router = Router()

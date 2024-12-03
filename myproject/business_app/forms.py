@@ -145,7 +145,7 @@ class CartForm(forms.ModelForm):
         label='Ключ Telegram',
         widget=forms.TextInput(attrs={
             'maxlength': 100,
-            'placeholder': 'Введите ваш Telegram Key, если хотите отслеживать заказ в боте',
+            'placeholder': 'Введите ваше имя или имя получателя в Telegram, если хотите отслеживать заказ в боте',
             'required': False
         }),
         required=False
@@ -158,7 +158,7 @@ class CartForm(forms.ModelForm):
     def clean_telegram_key(self):
         telegram_key = self.cleaned_data.get('telegram_key')
         if telegram_key and not telegram_key.startswith('@'):
-            raise forms.ValidationError("Telegram Key должен начинаться с @")
+            raise forms.ValidationError("Имя в Telegram  должно начинаться с @")
         return telegram_key
 
 
