@@ -1,19 +1,21 @@
 import logging
 import asyncio
-from pathlib import Path
+# from pathlib import Path
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.conf import settings
+# from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
 from aiogram import Router, types
-from aiogram.types import FSInputFile
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
+from aiogram.types import InputMediaPhoto, FSInputFile
 
 from asgiref.sync import async_to_sync, sync_to_async
+# from PIL import Image
+# import io
 
 from business_app.models import Order, User, Product, OrderItem
 from telegram_bot.models import TelegramUser
@@ -134,8 +136,7 @@ async def send_current_orders(chat_id):
             logging.info("Текущие заказы найдены")
 
             def process_orders():
-                messages = []
-                items_with_images = []
+                media_groups = []
 
                 for order in current_orders:
                     order_items = order.orderitem_set.all()
@@ -143,29 +144,46 @@ async def send_current_orders(chat_id):
                         [f"{item.product.name} - {item.quantity} шт." for item in order_items]
                     )
                     message = (f"Заказ ID: {order.id}\n"
-                               f"Статус: {STATUS_CHOICES.get(order.status, order.status)}\n"
+                               f"Статус: {order.get_status_display()}\n"
                                f"Адрес: {order.address}\n"
                                f"Сумма: {order.total_amount}\n"
                                f"Телефон: {order.phone}\n"
                                f"Комментарий: {order.comment or 'Нет'}\n"
                                f"Дата статуса: {order.status_datetime}\n"
                                f"Товары: {items_str}")
-                    messages.append(message)
 
-                    for item in order_items:
-                        items_with_images.append((order.id, item.product.image.path))
+                    media_group = []
 
-                return messages, items_with_images
+                    for i, item in enumerate(order_items):
+                        try:
+                            # Создаем объект FSInputFile из пути к изображению
+                            image_file = FSInputFile(item.product.image.path)
 
-            order_messages, items_with_images = await sync_to_async(process_orders)()
+                            if i == 0:
+                                media_group.append(
+                                    InputMediaPhoto(
+                                        media=image_file,
+                                        caption=message,
+                                        parse_mode=ParseMode.HTML
+                                    )
+                                )
+                            else:
+                                media_group.append(InputMediaPhoto(media=image_file))
+                        except Exception as img_error:
+                            logging.error(f"Ошибка при обработке изображения: {img_error}")
+                            continue
 
-            for message in order_messages:
-                await bot.send_message(chat_id, message, parse_mode=ParseMode.HTML)
+                    if media_group:
+                        media_groups.append(media_group)
 
-            for order_id, image_path in items_with_images:
-                full_image_path = Path(settings.MEDIA_ROOT) / image_path
-                photo = FSInputFile(full_image_path)
-                await bot.send_photo(chat_id=chat_id, photo=photo, caption=f"Изображение для заказа ID: {order_id}")
+                return media_groups
+
+            # Используем sync_to_async для вызова функции, которая работает с БД
+            media_groups = await sync_to_async(process_orders)()
+
+            for media_group in media_groups:
+                logging.info(f"Отправка медиа-группы: {media_group}")
+                await bot.send_media_group(chat_id, media_group)
 
         else:
             logging.info("Нет текущих заказов")
