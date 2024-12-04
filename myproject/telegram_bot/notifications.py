@@ -1,15 +1,15 @@
 import logging
-import os
 import asyncio
+from pathlib import Path
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
 from aiogram import Router, types
-# from aiogram.types import InputMediaPhoto, InputFile
+from aiogram.types import FSInputFile
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 
@@ -116,7 +116,6 @@ async def send_current_orders(chat_id):
     logging.info(f"Функция send_current_orders вызвана с chat_id: {chat_id}")
 
     try:
-        # Получаем текущие заказы вместе с связанными OrderItem объектами
         current_orders = await sync_to_async(
             lambda: list(
                 Order.objects.filter(
@@ -134,31 +133,39 @@ async def send_current_orders(chat_id):
         if current_orders:
             logging.info("Текущие заказы найдены")
 
-            # Обработка заказов в синхронной функции
             def process_orders():
                 messages = []
+                items_with_images = []
+
                 for order in current_orders:
                     order_items = order.orderitem_set.all()
                     items_str = ', '.join(
                         [f"{item.product.name} - {item.quantity} шт." for item in order_items]
                     )
-                    order_message = (f"Заказ ID: {order.id}\n"
-                                     f"Статус: {STATUS_CHOICES.get(order.status, order.status)}\n"
-                                     f"Адрес: {order.address}\n"
-                                     f"Сумма: {order.total_amount}\n"
-                                     f"Телефон: {order.phone}\n"
-                                     f"Комментарий: {order.comment or 'Нет'}\n"
-                                     f"Дата статуса: {order.status_datetime}\n"
-                                     f"Товары: {items_str}")
-                    messages.append(order_message)
-                return messages
+                    message = (f"Заказ ID: {order.id}\n"
+                               f"Статус: {STATUS_CHOICES.get(order.status, order.status)}\n"
+                               f"Адрес: {order.address}\n"
+                               f"Сумма: {order.total_amount}\n"
+                               f"Телефон: {order.phone}\n"
+                               f"Комментарий: {order.comment or 'Нет'}\n"
+                               f"Дата статуса: {order.status_datetime}\n"
+                               f"Товары: {items_str}")
+                    messages.append(message)
 
-            # Обрабатываем заказы
-            order_messages = await sync_to_async(process_orders)()
+                    for item in order_items:
+                        items_with_images.append((order.id, item.product.image.path))
 
-            # Отправляем сообщения
-            for order_message in order_messages:
-                await bot.send_message(chat_id, order_message, parse_mode=ParseMode.HTML)
+                return messages, items_with_images
+
+            order_messages, items_with_images = await sync_to_async(process_orders)()
+
+            for message in order_messages:
+                await bot.send_message(chat_id, message, parse_mode=ParseMode.HTML)
+
+            for order_id, image_path in items_with_images:
+                full_image_path = Path(settings.MEDIA_ROOT) / image_path
+                photo = FSInputFile(full_image_path)
+                await bot.send_photo(chat_id=chat_id, photo=photo, caption=f"Изображение для заказа ID: {order_id}")
 
         else:
             logging.info("Нет текущих заказов")
