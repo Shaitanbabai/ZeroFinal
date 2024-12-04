@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import os
+
 # from pathlib import Path
 
 from django.db.models.signals import post_save
@@ -14,7 +16,7 @@ from aiogram.filters import Command
 from aiogram.types import InputMediaPhoto, FSInputFile
 
 from asgiref.sync import async_to_sync, sync_to_async
-# from PIL import Image
+from PIL import Image
 # import io
 
 from business_app.models import Order, User, Product, OrderItem
@@ -114,6 +116,17 @@ async def login(message: types.Message):
         logging.error(f"Failed to delete message: {e}")
 
 
+def create_thumbnail(image_path, thumbnail_size=(160, 160)):
+    try:
+        with Image.open(image_path) as img:
+            img.thumbnail(thumbnail_size)
+            thumb_path = f"{os.path.splitext(image_path)[0]}_thumb{os.path.splitext(image_path)[1]}"
+            img.save(thumb_path)
+            return thumb_path
+    except Exception as e:
+        logging.error(f"Ошибка при создании превью: {e}")
+        return None
+
 async def send_current_orders(chat_id):
     logging.info(f"Функция send_current_orders вызвана с chat_id: {chat_id}")
 
@@ -149,26 +162,27 @@ async def send_current_orders(chat_id):
                                f"Сумма: {order.total_amount}\n"
                                f"Телефон: {order.phone}\n"
                                f"Комментарий: {order.comment or 'Нет'}\n"
-                               f"Дата статуса: {order.status_datetime}\n"
+                               f"Датастатуса: {order.status_datetime}\n"
                                f"Товары: {items_str}")
 
                     media_group = []
 
                     for i, item in enumerate(order_items):
                         try:
-                            # Создаем объект FSInputFile из пути к изображению
-                            image_file = FSInputFile(item.product.image.path)
-
-                            if i == 0:
-                                media_group.append(
-                                    InputMediaPhoto(
-                                        media=image_file,
-                                        caption=message,
-                                        parse_mode=ParseMode.HTML
+                            # Создаем превью изображения
+                            thumb_path = create_thumbnail(item.product.image.path)
+                            if thumb_path:
+                                image_file = FSInputFile(thumb_path)
+                                if i == 0:
+                                    media_group.append(
+                                        InputMediaPhoto(
+                                            media=image_file,
+                                            caption=message,
+                                            parse_mode=ParseMode.HTML
+                                        )
                                     )
-                                )
-                            else:
-                                media_group.append(InputMediaPhoto(media=image_file))
+                                else:
+                                    media_group.append(InputMediaPhoto(media=image_file))
                         except Exception as img_error:
                             logging.error(f"Ошибка при обработке изображения: {img_error}")
                             continue
