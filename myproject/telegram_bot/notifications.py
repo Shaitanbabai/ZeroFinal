@@ -1,4 +1,5 @@
 import logging
+import os
 import asyncio
 
 from django.db.models.signals import post_save
@@ -8,8 +9,9 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
 from aiogram import Router, types
-from aiogram.filters import Command
+# from aiogram.types import InputMediaPhoto, InputFile
 from aiogram.enums import ParseMode
+from aiogram.filters import Command
 
 from asgiref.sync import async_to_sync, sync_to_async
 
@@ -41,43 +43,6 @@ class SimpleLoggingMiddleware:
 
 # Установка middleware для логгирования сообщений
 dp.message.middleware(SimpleLoggingMiddleware())
-
-
-""" Роутеры для информирования клиента """
-
-
-@router.message(Command("subscribe"))
-async def subscribe(message: types.Message):
-    """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
-    chat_id = message.chat.id
-    telegram_username = f"@{message.from_user.username}"
-
-    try:
-        orders = Order.objects.filter(telegram_key=telegram_username)
-        if orders.exists():
-            TelegramUser.objects.update_or_create(
-                username=telegram_username,
-                defaults={'chat_id': chat_id}
-            )
-            await message.reply("Вы подписались на уведомления о статусах ваших заказов.")
-        else:
-            await message.reply("Не найден заказ, связанный с вашим именем пользователя.")
-    except Exception as e:
-        logging.error(f"Error subscribing user {telegram_username}: {e}")
-        await message.reply("Произошла ошибка при подписке.")
-
-
-@receiver(post_save, sender=Order)
-def notify_salesman_of_order_change(_sender, instance, created, **_kwargs):
-    """Информирует продавцов о создании или изменении заказа."""
-    message = f"Новый заказ создан: {instance.id}. Детали: {instance.details}" if created else f"Статус заказа {instance.id} изменился на {instance.status}."
-
-    try:
-        salesmen = TelegramUser.objects.filter(is_authenticated=True)
-        for salesman in salesmen:
-            async_to_sync(send_telegram_message)(salesman.chat_id, message)
-    except Exception as e:
-        logging.error(f"Error notifying salesmen: {e}")
 
 
 """ Роутеры для информирования продавца """
@@ -151,40 +116,98 @@ async def send_current_orders(chat_id):
     logging.info(f"Функция send_current_orders вызвана с chat_id: {chat_id}")
 
     try:
-        current_orders = await sync_to_async(lambda: list(Order.objects.filter(
-            status__in=[
-                Order.STATUS_PENDING,
-                Order.STATUS_CONFIRMED,
-                Order.STATUS_DELIVERY
-            ]
-        )))()
+        # Получаем текущие заказы вместе с связанными OrderItem объектами
+        current_orders = await sync_to_async(
+            lambda: list(
+                Order.objects.filter(
+                    status__in=[
+                        Order.STATUS_PENDING,
+                        Order.STATUS_CONFIRMED,
+                        Order.STATUS_DELIVERY
+                    ]
+                ).prefetch_related('orderitem_set__product')
+            )
+        )()
 
         logging.info("Запрос к базе данных выполнен")
 
         if current_orders:
             logging.info("Текущие заказы найдены")
-            for order in current_orders:
-                items_list = await sync_to_async(lambda: list(order.items.all()))()
-                items_str = ', '.join(
-                    [item.name for item in items_list])  # Предполагается, что у Product есть поле name
 
-                order_message = (f"Заказ ID: {order.id}\n"
-                                 f"Статус: {STATUS_CHOICES.get(order.status, order.status)}\n"
-                                 f"Адрес: {order.address}\n"
-                                 f"Сумма: {order.total_amount}\n"
-                                 f"Телефон: {order.phone}\n"
-                                 f"Комментарий: {order.comment or 'Нет'}\n"
-                                 f"Дата статуса: {order.status_datetime}\n"
-                                 f"Товары: {items_str}")
+            # Обработка заказов в синхронной функции
+            def process_orders():
+                messages = []
+                for order in current_orders:
+                    order_items = order.orderitem_set.all()
+                    items_str = ', '.join(
+                        [f"{item.product.name} - {item.quantity} шт." for item in order_items]
+                    )
+                    order_message = (f"Заказ ID: {order.id}\n"
+                                     f"Статус: {STATUS_CHOICES.get(order.status, order.status)}\n"
+                                     f"Адрес: {order.address}\n"
+                                     f"Сумма: {order.total_amount}\n"
+                                     f"Телефон: {order.phone}\n"
+                                     f"Комментарий: {order.comment or 'Нет'}\n"
+                                     f"Дата статуса: {order.status_datetime}\n"
+                                     f"Товары: {items_str}")
+                    messages.append(order_message)
+                return messages
 
+            # Обрабатываем заказы
+            order_messages = await sync_to_async(process_orders)()
+
+            # Отправляем сообщения
+            for order_message in order_messages:
                 await bot.send_message(chat_id, order_message, parse_mode=ParseMode.HTML)
+
         else:
             logging.info("Нет текущих заказов")
-            await bot.send_message(chat_id, "Нет текущих заказов. ")
+            await bot.send_message(chat_id, "Нет текущих заказов.")
 
         logging.info("Сообщение отправлено")
     except Exception as e:
         logging.error(f"Ошибка при выполнении send_current_orders: {e}")
+
+
+""" Роутер для подписки на уведомления """
+
+
+@router.message(Command("subscribe"))
+async def subscribe(message: types.Message):
+    """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
+    chat_id = message.chat.id
+    telegram_username = f"@{message.from_user.username}"
+
+    try:
+        orders = Order.objects.filter(telegram_key=telegram_username)
+        if orders.exists():
+            TelegramUser.objects.update_or_create(
+                username=telegram_username,
+                defaults={'chat_id': chat_id}
+            )
+            await message.reply("Вы подписались на уведомления о статусах ваших заказов.")
+        else:
+            await message.reply("Не найден заказ, связанный с вашим именем пользователя.")
+    except Exception as e:
+        logging.error(f"Error subscribing user {telegram_username}: {e}")
+        await message.reply("Произошла ошибка при подписке.")
+
+
+""" Роутеры для рассылки уведомлений """
+
+
+@receiver(post_save, sender=Order)
+def notify_salesman_of_order_change(_sender, instance, created, **_kwargs):
+    """Информирует продавцов о создании или изменении заказа."""
+    message = f"Новый заказ создан: {instance.id}. Детали: {instance.details}" if created else f"Статус заказа {instance.id} изменился на {instance.status}."
+
+    try:
+        salesmen = TelegramUser.objects.filter(is_authenticated=True)
+        for salesman in salesmen:
+            async_to_sync(send_telegram_message)(salesman.chat_id, message)
+    except Exception as e:
+        logging.error(f"Error notifying salesmen: {e}")
+
 
 
 @receiver(post_save, sender=Order)
