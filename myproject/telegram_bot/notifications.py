@@ -2,11 +2,8 @@ import logging
 import asyncio
 import os
 
-# from pathlib import Path
-
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-# from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
@@ -17,7 +14,6 @@ from aiogram.types import InputMediaPhoto, FSInputFile
 
 from asgiref.sync import async_to_sync, sync_to_async
 from PIL import Image
-# import io
 
 from business_app.models import Order, User, Product, OrderItem
 from telegram_bot.models import TelegramUser
@@ -82,19 +78,16 @@ async def login(message: types.Message):
                     defaults={'is_authenticated': True, 'chat_id': message.chat.id}
                 )
                 auth_result = ("Вы успешно авторизовались, коллега. "
-                               
                                "Если Вы всё еще видите свое сообщение с логином и паролем - "
                                "удалите самостоятельно иначе вас заберет Пятниццо!"
                                "\n\nА теперь посмотрим на фронт работ и отчеты об успехах.")
-                # Отправляем сообщение только для продавцов
                 await message.reply(auth_result)
                 await send_current_orders(message.chat.id)
-                # Удаляем сообщение пользователя
                 try:
                     await message.delete()
                 except Exception as e:
                     logging.error(f"Failed to delete message: {e}")
-                return  # Завершаем выполнение функции, чтобы не отправлять следующее сообщение
+                return
             else:
                 auth_result = ("Вы не являетесь работником магазина. "
                                "Вы можете выбрать команду /subscribe для отслеживания заказов "
@@ -106,14 +99,7 @@ async def login(message: types.Message):
         logging.error(f"Error during login: {e}")
         auth_result = "Произошла ошибка во время авторизации. Пожалуйста, попробуйте позже."
 
-    # Отправляем сообщение для всех остальных случаев
-    await message.reply(auth_result + "\nНо если Вы хотите нас хакнуть, то мы не только букеты, но и венки умеем")
-
-    # Удаляем сообщение пользователя
-    try:
-        await message.delete()
-    except Exception as e:
-        logging.error(f"Failed to delete message: {e}")
+    await message.reply(auth_result)
 
 
 def create_thumbnail(image_path, thumbnail_size=(160, 160)):

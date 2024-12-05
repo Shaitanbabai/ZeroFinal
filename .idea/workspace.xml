@@ -5,7 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="08671c6b-3278-40d9-8cb2-83a2702050e3" name="Changes" comment="Из карточки товара в форму заказа не передаются данные товара.">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/keyboards.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/keyboards.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -195,6 +198,17 @@
     </task>
     <option name="localTasksCounter" value="4" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Began Order creation and purchase block&#10;&#10;models.py - добавлены модели Product и Order,&#10;views.py - добавлены метод сreate_order , валидация purchase упрощена и унифицирована с сreate_order&#10;urls.py - добавлены пути для работы с формой заказа order_form и переадресацией на purchase.html&#10;froms.py - добавлен  класс OrderForm&#10;Код шаблонов не создан.&#10;&#10;Требуется доработать модули для заказов с изменяемым количеством единиц и наименований." />
