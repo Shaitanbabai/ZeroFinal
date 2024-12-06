@@ -8,8 +8,9 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/db.sqlite3" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/bot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/keyboards.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/keyboards.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/notifications.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/myproject/telegram_bot/reports.py" beforeDir="false" afterPath="$PROJECT_DIR$/myproject/telegram_bot/reports.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,7 +83,7 @@
       <recent name="C:\Users\shrio\PycharmProjects\ZeroFinal" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.manage">
+  <component name="RunManager" selected="Python.bot">
     <configuration name="bot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ZeroFinalNew" />
       <option name="ENV_FILES" value="" />
@@ -151,8 +152,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.manage" />
         <item itemvalue="Python.bot" />
+        <item itemvalue="Python.manage" />
       </list>
     </recent_temporary>
   </component>

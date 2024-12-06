@@ -171,14 +171,13 @@ async def login_callback(callback_query: types.CallbackQuery):
     else:
         await callback_query.answer("Вы не можете выполнить эту команду.")
 
-@main_router.callback_query(F.data == 'subscribe')
+@main_router.callback_query(lambda c: c.data == 'subscribe')
 async def subscribe_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
     if not is_session_active(user_id):
         await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
         return
-    user_sessions[user_id]['subscribed'] = True
-    update_session_activity(user_id)
+    user_sessions[user_id] = {'subscribed': True}
     await callback_query.message.edit_text("Вы успешно подписаны на уведомления.")
 
 @main_router.callback_query(F.data == 'reports')
