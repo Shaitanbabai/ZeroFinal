@@ -1,7 +1,7 @@
 import logging
 import os
 
-import requests
+# import requests
 # from pathlib import Path
 
 # from django.db.models.signals import post_save
@@ -211,6 +211,27 @@ async def send_current_orders(chat_id):
         logging.error(f"Ошибка при выполнении send_current_orders: {e}")
 
 
+async def subscribe(message: types.Message):
+    from business_app.models import Order
+    """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
+    chat_id = message.chat.id
+    telegram_username = f"@{message.from_user.username}"
+
+    try:
+        orders = Order.objects.filter(telegram_key=telegram_username)
+        if orders.exists():
+            TelegramUser.objects.update_or_create(
+                username=telegram_username,
+                defaults={'chat_id': chat_id}
+            )
+            await message.reply("Вы подписались на уведомления о статусах ваших заказов.")
+        else:
+            await message.reply("Не найден заказ, связанный с вашим именем пользователя.")
+    except Exception as e:
+        logging.error(f"Error subscribing user {telegram_username}: {e}")
+        await message.reply("Произошла ошибка при подписке.")
+
+
 # @receiver(post_save, sender=Order)
 # def notify_order_status_change(sender, instance, created, **kwargs):
 #     print("Signal received")
@@ -238,21 +259,6 @@ async def send_current_orders(chat_id):
 #                 logging.warning(f"No Telegram user found for username {telegram_username}")
 #         except Exception as e:
 #             logging.error(f"Error notifying user {telegram_username}: {e}")
-
-def send_telegram_message(chat_id, text, reply_markup=None):
-    try:
-        data = {
-            "chat_id": chat_id,
-            "text": text
-        }
-        if reply_markup:
-            data["reply_markup"] = reply_markup
-        res = requests.post(f"https://api.telegram.org/bot{API_TOKEN}/sendMessage", json=data)
-        print(f"{res.json()=}")
-        res.raise_for_status()
-        logging.info(f"Message sent to {chat_id}: {text}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error sending message to {chat_id}: {e}")
 
 def register_notifications(main_router: Router):
     main_router.include_router(router)

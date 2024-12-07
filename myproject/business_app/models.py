@@ -11,6 +11,8 @@ from telegram_bot.models import TelegramUser
 
 from django.utils import timezone
 
+from telegram_bot.notifications_telegram_key import send_telegram_message
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Create your models here.
@@ -115,6 +117,7 @@ class Reply(models.Model):
 
 @receiver(post_save, sender=Order)
 def notify_order_status_change(sender, instance, created, **kwargs):
+    logging.debug(f"Signal for Order: created={created}, instance={instance}")
     # вложенные импорты не вызовут ошибку цикрулярного импорта,
     # так как код внутри функций не читается интерпретатором
     # при изначальном выполнении модуля
