@@ -14,20 +14,7 @@ API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def send_telegram_message(chat_id, text, reply_markup=None):
-    try:
-        data = {
-            "chat_id": chat_id,
-            "text": text
-        }
-        if reply_markup:
-            data["reply_markup"] = reply_markup
-        res = requests.post(f"https://api.telegram.org/bot{API_TOKEN}/sendMessage", json=data)
-        print(f"{res.json()=}")
-        res.raise_for_status()
-        logging.info(f"Message sent to {chat_id}: {text}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error sending message to {chat_id}: {e}")
+
 
 
 # # # Используем уже инициализированные объекты bot и dp

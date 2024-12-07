@@ -1,6 +1,7 @@
 import logging
 import os
 
+import requests
 # from pathlib import Path
 
 # from django.db.models.signals import post_save
@@ -237,6 +238,21 @@ async def send_current_orders(chat_id):
 #                 logging.warning(f"No Telegram user found for username {telegram_username}")
 #         except Exception as e:
 #             logging.error(f"Error notifying user {telegram_username}: {e}")
+
+def send_telegram_message(chat_id, text, reply_markup=None):
+    try:
+        data = {
+            "chat_id": chat_id,
+            "text": text
+        }
+        if reply_markup:
+            data["reply_markup"] = reply_markup
+        res = requests.post(f"https://api.telegram.org/bot{API_TOKEN}/sendMessage", json=data)
+        print(f"{res.json()=}")
+        res.raise_for_status()
+        logging.info(f"Message sent to {chat_id}: {text}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending message to {chat_id}: {e}")
 
 def register_notifications(main_router: Router):
     main_router.include_router(router)

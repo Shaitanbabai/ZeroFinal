@@ -11,6 +11,8 @@ from telegram_bot.models import TelegramUser
 
 from django.utils import timezone
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # Create your models here.
 class Product(models.Model):
     """
