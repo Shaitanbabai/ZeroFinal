@@ -1,31 +1,33 @@
 import logging
 import os
-from pathlib import Path
-import requests
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.conf import settings
+import requests
+# from pathlib import Path
+
+# from django.db.models.signals import post_save
+# from django.dispatch import receiver
+# from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
 from aiogram import Router, types
-from aiogram.types import FSInputFile
+from aiogram.types import FSInputFile, InputMediaPhoto
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 
 from asgiref.sync import sync_to_async
+from PIL import Image
 
 from business_app.models import Order, User, Product, OrderItem
 from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
 
-from telegram_bot.keyboards import get_customer_keyboard
+# from telegram_bot.keyboards import get_customer_keyboard
 
 
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Используем уже инициализированные объекты bot и dp
 router = Router()
@@ -118,6 +120,17 @@ async def login(message: types.Message):
         logging.error(f"Failed to delete message: {e}")
 
 
+def create_thumbnail(image_path, thumbnail_size=(160, 160)):
+    try:
+        with Image.open(image_path) as img:
+            img.thumbnail(thumbnail_size)
+            thumb_path = f"{os.path.splitext(image_path)[0]}_thumb{os.path.splitext(image_path)[1]}"
+            img.save(thumb_path)
+            return thumb_path
+    except Exception as e:
+        logging.error(f"Ошибка при создании превью: {e}")
+        return None
+
 async def send_current_orders(chat_id):
     logging.info(f"Функция send_current_orders вызвана с chat_id: {chat_id}")
 
@@ -140,8 +153,7 @@ async def send_current_orders(chat_id):
             logging.info("Текущие заказы найдены")
 
             def process_orders():
-                messages = []
-                items_with_images = []
+                media_groups = []
 
                 for order in current_orders:
                     order_items = order.orderitem_set.all()
@@ -149,29 +161,47 @@ async def send_current_orders(chat_id):
                         [f"{item.product.name} - {item.quantity} шт." for item in order_items]
                     )
                     message = (f"Заказ ID: {order.id}\n"
-                               f"Статус: {STATUS_CHOICES.get(order.status, order.status)}\n"
+                               f"Статус: {order.get_status_display()}\n"
                                f"Адрес: {order.address}\n"
                                f"Сумма: {order.total_amount}\n"
                                f"Телефон: {order.phone}\n"
                                f"Комментарий: {order.comment or 'Нет'}\n"
-                               f"Дата статуса: {order.status_datetime}\n"
+                               f"Датастатуса: {order.status_datetime}\n"
                                f"Товары: {items_str}")
-                    messages.append(message)
 
-                    for item in order_items:
-                        items_with_images.append((order.id, item.product.image.path))
+                    media_group = []
 
-                return messages, items_with_images
+                    for i, item in enumerate(order_items):
+                        try:
+                            # Создаем превью изображения
+                            thumb_path = create_thumbnail(item.product.image.path)
+                            if thumb_path:
+                                image_file = FSInputFile(thumb_path)
+                                if i == 0:
+                                    media_group.append(
+                                        InputMediaPhoto(
+                                            media=image_file,
+                                            caption=message,
+                                            parse_mode=ParseMode.HTML
+                                        )
+                                    )
+                                else:
+                                    media_group.append(InputMediaPhoto(media=image_file))
+                        except Exception as img_error:
+                            logging.error(f"Ошибка при обработке изображения: {img_error}")
+                            continue
 
-            order_messages, items_with_images = await sync_to_async(process_orders)()
+                    if media_group:
+                        media_groups.append(media_group)
 
-            for message in order_messages:
-                await bot.send_message(chat_id, message, parse_mode=ParseMode.HTML)
+                return media_groups
 
-            for order_id, image_path in items_with_images:
-                full_image_path = Path(settings.MEDIA_ROOT) / image_path
-                photo = FSInputFile(full_image_path)
-                await bot.send_photo(chat_id=chat_id, photo=photo, caption=f"Изображение для заказа ID: {order_id}")
+            # Используем sync_to_async для вызова функции, которая работает с БД
+            media_groups = await sync_to_async(process_orders)()
+
+            for media_group in media_groups:
+                logging.info(f"Отправка медиа-группы: {media_group}")
+                await bot.send_media_group(chat_id, media_group)
 
         else:
             logging.info("Нет текущих заказов")
@@ -182,31 +212,36 @@ async def send_current_orders(chat_id):
         logging.error(f"Ошибка при выполнении send_current_orders: {e}")
 
 
-""" Роутер для подписки на уведомления """
+# @receiver(post_save, sender=Order)
+# def notify_order_status_change(sender, instance, created, **kwargs):
+#     print("Signal received")
+#     logging.debug("Signal received")
+#     telegram_username = instance.telegram_key
+#     logging.debug(f"Searching for Telegram user with username: {telegram_username}")
+#     if telegram_username:
+#         try:
+#             user = TelegramUser.objects.filter(username=telegram_username).first()
+#             logging.debug(f"User found: {user}")
+#             if user:
+#                 logging.debug(f"Order created: {created}, Order status: {instance.status}")
+#                 if created:
+#                     message = "Ваш заказ создан. Подпишитесь для отслеживания статуса."
+#                     reply_markup = get_customer_keyboard()
+#                 else:
+#                     if instance.status == "completed":
+#                         message = f"Ваш заказ с ID {instance.id} завершен."
+#                     else:
+#                         message = f"Статус вашего заказа с ID {instance.id} изменился на {instance.status}."
+#                     reply_markup = None
+#
+#                 send_telegram_message(user.chat_id, message, reply_markup)
+#             else:
+#                 logging.warning(f"No Telegram user found for username {telegram_username}")
+#         except Exception as e:
+#             logging.error(f"Error notifying user {telegram_username}: {e}")
 
-
-@router.message(Command("subscribe"))
-async def subscribe(message: types.Message):
-    """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
-    chat_id = message.chat.id
-    telegram_username = f"@{message.from_user.username}"
-
-    try:
-        orders = Order.objects.filter(telegram_key=telegram_username)
-        if orders.exists():
-            TelegramUser.objects.update_or_create(
-                username=telegram_username,
-                defaults={'chat_id': chat_id}
-            )
-            await message.reply("Вы подписались на уведомления о статусах ваших заказов.")
-        else:
-            await message.reply("Не найден заказ, связанный с вашим именем пользователя.")
-    except Exception as e:
-        logging.error(f"Error subscribing user {telegram_username}: {e}")
-        await message.reply("Произошла ошибка при подписке.")
-
-
-""" Роутеры для рассылки уведомлений """
+def register_notifications(main_router: Router):
+    main_router.include_router(router)
 
 
 # @receiver(post_save, sender=Order)
@@ -220,49 +255,3 @@ async def subscribe(message: types.Message):
 #             async_to_sync(send_telegram_message)(salesman.chat_id, message)
 #     except Exception as e:
 #         logging.error(f"Error notifying salesmen: {e}")
-
-
-def send_telegram_message(chat_id, text, reply_markup=None):
-    try:
-        data = {
-            "chat_id": chat_id,
-            "text": text
-        }
-        if reply_markup:
-            data["reply_markup"] = reply_markup
-        res = requests.post(f"https://api.telegram.org/bot{API_TOKEN}/sendMessage", json=data)
-        print(f"{res.json()=}")
-        res.raise_for_status()
-        logging.info(f"Message sent to {chat_id}: {text}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error sending message to {chat_id}: {e}")
-
-@receiver(post_save, sender=Order)
-def notify_order_status_change(sender, instance, created, **kwargs):
-    telegram_username = instance.telegram_key
-    logging.debug(f"Telegram username: {telegram_username}")
-    if telegram_username:
-        try:
-            user = TelegramUser.objects.filter(username=telegram_username).first()
-            logging.debug(f"User found: {user}")
-            if user:
-                logging.debug(f"Order created: {created}, Order status: {instance.status}")
-                if created:
-                    message = "Ваш заказ создан. Подпишитесь для отслеживания статуса."
-                    reply_markup = get_customer_keyboard()
-                else:
-                    if instance.status == "completed":
-                        message = f"Ваш заказ с ID {instance.id} завершен."
-                    else:
-                        message = f"Статус вашего заказа с ID {instance.id} изменился на {instance.status}."
-                    reply_markup = None
-
-                send_telegram_message(user.chat_id, message, reply_markup)
-            else:
-                logging.warning(f"No Telegram user found for username {telegram_username}")
-        except Exception as e:
-            logging.error(f"Error notifying user {telegram_username}: {e}")
-
-
-def register_notifications(main_router: Router):
-    main_router.include_router(router)

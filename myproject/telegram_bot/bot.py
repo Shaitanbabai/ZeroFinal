@@ -81,11 +81,11 @@ def get_salesman_keyboard():
     ])
     return builder
 
-def get_customer_keyboard():
-    builder = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Подписаться на уведомления", callback_data="subscribe")]
-    ])
-    return builder
+# def get_customer_keyboard():
+#     builder = InlineKeyboardMarkup(inline_keyboard=[
+#         [InlineKeyboardButton(text="Подписаться на уведомления", callback_data="subscribe")]
+#     ])
+#     return builder
 
 def get_sales_report_keyboard():
     builder = InlineKeyboardMarkup(inline_keyboard=[
@@ -171,27 +171,27 @@ async def login_callback(callback_query: types.CallbackQuery):
     else:
         await callback_query.answer("Вы не можете выполнить эту команду.")
 
-@main_router.callback_query(lambda c: c.data == 'subscribe')
-async def subscribe_callback(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    if not is_session_active(user_id):
-        await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
-        return
-    user_sessions[user_id] = {'subscribed': True}
-    await callback_query.message.edit_text("Вы успешно подписаны на уведомления.")
-
-@main_router.callback_query(F.data == 'reports')
-async def reports_callback(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    if not is_session_active(user_id):
-        await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
-        return
-    session = user_sessions.get(user_id)
-    if session.get('role') == 'salesman' and session.get('subscribed'):
-        update_session_activity(user_id)
-        await callback_query.message.edit_text("Выберите отчет:", reply_markup=get_sales_report_keyboard())
-    else:
-        await callback_query.answer("У вас нет прав для выполнения этой команды.")
+# @main_router.callback_query(lambda c: c.data == 'subscribe')
+# async def subscribe_callback(callback_query: types.CallbackQuery):
+#     user_id = callback_query.from_user.id
+#     if not is_session_active(user_id):
+#         await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
+#         return
+#     user_sessions[user_id] = {'subscribed': True}
+#     await callback_query.message.edit_text("Вы успешно подписаны на уведомления.")
+#
+# @main_router.callback_query(F.data == 'reports')
+# async def reports_callback(callback_query: types.CallbackQuery):
+#     user_id = callback_query.from_user.id
+#     if not is_session_active(user_id):
+#         await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
+#         return
+#     session = user_sessions.get(user_id)
+#     if session.get('role') == 'salesman' and session.get('subscribed'):
+#         update_session_activity(user_id)
+#         await callback_query.message.edit_text("Выберите отчет:", reply_markup=get_sales_report_keyboard())
+#     else:
+#         await callback_query.answer("У вас нет прав для выполнения этой команды.")
 
 async def main():
     # await set_commands(bot)

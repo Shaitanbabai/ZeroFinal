@@ -1,5 +1,15 @@
+import logging
+
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from telegram_bot.keyboards import get_customer_keyboard
+from telegram_bot.models import TelegramUser
+from telegram_bot.notifications import send_telegram_message
+
+
 # from django.utils import timezone
 
 # Create your models here.
@@ -94,8 +104,45 @@ class Reply(models.Model):
     content = models.TextField(max_length=240)
     pub_date = models.DateTimeField(auto_now_add=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.review = None
+
     def __str__(self):
         return f"Reply to review {self.review.id}"
+
+
+@receiver(post_save, sender=Order)
+def notify_order_status_change(sender, instance, created, **kwargs):
+    # вложенные импорты не вызовут ошибку цикрулярного импорта,
+    # так как код внутри функций не читается интерпретатором
+    # при изначальном выполнении модуля
+    from telegram_bot.models import TelegramUser
+    print("Signal received")
+    logging.debug("Signal received")
+    telegram_username = instance.telegram_key
+    logging.debug(f"Searching for Telegram user with username: {telegram_username}")
+    if telegram_username:
+        try:
+            user = TelegramUser.objects.filter(username=telegram_username).first()
+            logging.debug(f"User found: {user}")
+            if user:
+                logging.debug(f"Order created: {created}, Order status: {instance.status}")
+                if created:
+                    message = "Ваш заказ создан. Подпишитесь для отслеживания статуса."
+                    reply_markup = get_customer_keyboard()
+                else:
+                    if instance.status == "completed":
+                        message = f"Ваш заказ с ID {instance.id} завершен."
+                    else:
+                        message = f"Статус вашего заказа с ID {instance.id} изменился на {instance.status}."
+                    reply_markup = None
+
+                send_telegram_message(user.chat_id, message, reply_markup)
+            else:
+                logging.warning(f"No Telegram user found for username {telegram_username}")
+        except Exception as e:
+            logging.error(f"Error notifying user {telegram_username}: {e}")
 
 
 
