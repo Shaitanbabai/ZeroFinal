@@ -118,24 +118,23 @@ class Reply(models.Model):
 @receiver(post_save, sender=Order)
 def notify_order_status_change(sender, instance, created, **kwargs):
     logging.debug(f"Signal for Order: created={created}, instance={instance}")
-    # вложенные импорты не вызовут ошибку цикрулярного импорта,
-    # так как код внутри функций не читается интерпретатором
-    # при изначальном выполнении модуля
     from telegram_bot.models import TelegramUser
-    print("Signal received")
-    logging.debug("Signal received")
+
     telegram_username = instance.telegram_key
     logging.debug(f"Searching for Telegram user with username: {telegram_username}")
+
     if telegram_username:
         try:
             user = TelegramUser.objects.filter(username=telegram_username).first()
             logging.debug(f"User found: {user}")
+
             if user:
-                logging.debug(f"Order created: {created}, Order status: {instance.status}")
                 if created:
-                    message = "Ваш заказ создан. Подпишитесь для отслеживания статуса."
+                    # Если заказ создан, отправляем сообщение о создании
+                    message = f"Ваш заказ с ID {instance.id} создан и подтвержден."
                     reply_markup = get_customer_keyboard()
                 else:
+                    # Если заказ обновлен, проверяем статус
                     if instance.status == "completed":
                         message = f"Ваш заказ с ID {instance.id} завершен."
                     else:

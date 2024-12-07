@@ -1,13 +1,6 @@
 import logging
 import os
 import requests
-# from aiogram.filters import Command
-# from aiogram import Router, types
-#
-# from business_app.models import Order
-# from telegram_bot.models import TelegramUser
-# from telegram_bot.bot import bot, dp
-
 
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 
@@ -22,8 +15,9 @@ def send_telegram_message(chat_id, text, reply_markup=None):
         }
         if reply_markup:
             data["reply_markup"] = reply_markup
+        logging.debug(f"Sending data to Telegram: {data}")
         res = requests.post(f"https://api.telegram.org/bot{API_TOKEN}/sendMessage", json=data)
-        print(f"{res.json()=}")
+        logging.debug(f"Telegram response: {res.json()}")
         res.raise_for_status()
         logging.info(f"Message sent to {chat_id}: {text}")
     except requests.exceptions.RequestException as e:
