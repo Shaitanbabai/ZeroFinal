@@ -20,6 +20,7 @@ from telegram_bot.keyboards import (
     get_sales_report_keyboard
 )
 
+
 # Загрузка переменных окружения из .env файла
 load_dotenv()
 

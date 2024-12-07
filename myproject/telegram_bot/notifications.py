@@ -1,7 +1,6 @@
 import logging
 import os
 
-import requests
 # from pathlib import Path
 
 # from django.db.models.signals import post_save
@@ -18,12 +17,10 @@ from aiogram.filters import Command
 from asgiref.sync import sync_to_async
 from PIL import Image
 
-from business_app.models import Order, User, Product, OrderItem
 from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
 
 # from telegram_bot.keyboards import get_customer_keyboard
-
 
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 
@@ -132,6 +129,7 @@ def create_thumbnail(image_path, thumbnail_size=(160, 160)):
         return None
 
 async def send_current_orders(chat_id):
+    from business_app.models import Order, User, Product, OrderItem
     logging.info(f"Функция send_current_orders вызвана с chat_id: {chat_id}")
 
     try:

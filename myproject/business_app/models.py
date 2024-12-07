@@ -7,10 +7,9 @@ from django.dispatch import receiver
 
 from telegram_bot.keyboards import get_customer_keyboard
 from telegram_bot.models import TelegramUser
-from telegram_bot.notifications import send_telegram_message
+# from telegram_bot.notifications import send_telegram_message
 
-
-# from django.utils import timezone
+from django.utils import timezone
 
 # Create your models here.
 class Product(models.Model):
