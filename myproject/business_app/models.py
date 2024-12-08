@@ -1,4 +1,5 @@
 import logging
+import os
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -13,6 +14,7 @@ from telegram_bot.models import TelegramUser
 
 from telegram_bot.notifications_telegram_key import send_telegram_message
 
+API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 
 logging.basicConfig(
     level=logging.INFO,  # Уровень логирования
@@ -68,7 +70,7 @@ class Order(LifecycleModel):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    items = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
+    items = models.ManyToManyField('Product', through='OrderItem', related_name='orders')
     total_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     phone = models.CharField(max_length=12)
     address = models.TextField(max_length=120)
@@ -79,21 +81,27 @@ class Order(LifecycleModel):
 
     @hook(AFTER_CREATE)
     def notify_creation(self):
-        logging.debug(f"Attempting to notify user for Order ID: {self.id}")
         from telegram_bot.models import TelegramUser
-        telegram_username = self.telegram_key
-        if telegram_username:
-            try:
-                user = TelegramUser.objects.filter(username=telegram_username).first()
-                if user:
-                    logging.debug(f"Found Telegram user {user.username}")
-                    message = f"Ваш заказ с ID {self.id} создан и подтвержден."
-                    reply_markup = get_customer_keyboard()
-                    send_telegram_message(user.chat_id, message, reply_markup)
-                else:
-                    logging.warning(f"No Telegram user found for username {telegram_username}")
-            except Exception as e:
-                logging.error(f"Error notifying user {telegram_username}: {e}")
+        logging.debug(f"Attempting to notify user for Order ID: {self.id}")
+
+        if self.status == 'confirmed':
+            telegram_username = self.telegram_key
+            if telegram_username:
+                try:
+                    user = TelegramUser.objects.filter(username=telegram_username).first()
+                    if user:
+                        logging.debug(f"Found Telegram user {user.username}")
+                        message = f"Для вас есть заказ с ID {self.id} в статусе confirmed."
+                        reply_markup = get_customer_keyboard()
+                        send_telegram_message(user.chat_id, message, reply_markup)
+                    else:
+                        logging.warning(f"No Telegram user found for username {telegram_username}")
+                except Exception as e:
+                    logging.error(f"Error notifying user {telegram_username}: {e}")
+            else:
+                logging.warning("Telegram username is not set for this order.")
+        else:
+            logging.debug("Order is not in 'confirmed' status, skipping notification.")
 
     @hook(AFTER_UPDATE, when='status', has_changed=True)
     def notify_status_change(self):
@@ -104,8 +112,7 @@ class Order(LifecycleModel):
             try:
                 user = TelegramUser.objects.filter(username=telegram_username).first()
                 if user:
-                    message = (
-                        f"Ваш заказ с ID {self.id} завершен."
+                    message = (f"Ваш заказ с ID {self.id} завершен."
                         if self.status == self.STATUS_COMPLETED
                         else f"Статус вашего заказа с ID {self.id} изменился на {self.status}."
                     )

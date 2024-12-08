@@ -3,15 +3,19 @@ import os
 from dotenv import load_dotenv
 import asyncio
 from datetime import datetime, timedelta
+from django.utils import timezone
+from django.db.models import Q
 
 from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
-# from aiogram.types import Message
+from aiogram.types import BotCommand
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.bot import DefaultBotProperties
 from aiogram.filters import Command
 from aiogram import F
 
+from asgiref.sync import sync_to_async
+
+from business_app.models import Order
 from telegram_bot.handlers import register_handlers
 from telegram_bot.keyboards import (
     get_start_keyboard,
@@ -19,7 +23,6 @@ from telegram_bot.keyboards import (
     get_customer_keyboard,
     get_sales_report_keyboard
 )
-
 
 # Загрузка переменных окружения из .env файла
 load_dotenv()
@@ -69,31 +72,6 @@ SESSION_TIMEOUT = 60
 
 user_sessions = {}
 
-def get_start_keyboard():
-    builder = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Я работник", callback_data="salesman")],
-        [InlineKeyboardButton(text="Я покупатель", callback_data="customer")]
-    ])
-    return builder
-
-def get_salesman_keyboard():
-    builder = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Войти", callback_data="login")]
-    ])
-    return builder
-
-# def get_customer_keyboard():
-#     builder = InlineKeyboardMarkup(inline_keyboard=[
-#         [InlineKeyboardButton(text="Подписаться на уведомления", callback_data="subscribe")]
-#     ])
-#     return builder
-
-def get_sales_report_keyboard():
-    builder = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Получить отчеты о продажах", callback_data="reports")]
-    ])
-    return builder
-
 def is_session_active(user_id):
     session = user_sessions.get(user_id)
     if not session:
@@ -101,20 +79,69 @@ def is_session_active(user_id):
     last_activity = session.get('last_activity')
     if not last_activity:
         return False
-    return (datetime.now() - last_activity) < timedelta(minutes=SESSION_TIMEOUT)
+    return (timezone.now() - last_activity) < timedelta(minutes=SESSION_TIMEOUT)
 
 def update_session_activity(user_id):
     if user_id in user_sessions:
-        user_sessions[user_id]['last_activity'] = datetime.now()
+        user_sessions[user_id]['last_activity'] = timezone.now()
 
 @main_router.message(Command(commands=['start']))
 async def start_command(message: types.Message):
     user_id = message.from_user.id
     if not is_session_active(user_id):
-        user_sessions[user_id] = {'role': None, 'subscribed': False, 'last_activity': datetime.now()}
-        await message.answer("Выберите вашу роль:", reply_markup=get_start_keyboard())
+        user_sessions[user_id] = {
+            'role': None,
+            'subscribed': False,
+            'last_activity': timezone.now()
+        }
+        await message.answer(
+            "Выберите вашу роль:",
+            reply_markup=get_start_keyboard()
+        )
     else:
         await message.answer("Вы уже выбрали роль в текущей сессии.")
+
+
+@main_router.callback_query(F.data == 'customer')
+async def customer_callback(callback_query: types.CallbackQuery):
+    logging.info("Обработчик customer_callback вызван")
+    user_id = callback_query.from_user.id
+    if not is_session_active(user_id):
+        await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
+        return
+
+    # Форматируем username
+    username = callback_query.from_user.username
+    if username:
+        username_with_at = f"@{username}"
+
+        # Используем sync_to_async для выполнения синхронного запроса
+        order_exists = await sync_to_async(Order.objects.filter(Q(telegram_key=username) | Q(telegram_key=username_with_at)).exists)()
+
+        if order_exists:
+            user_sessions[user_id]['role'] = 'customer'
+            update_session_activity(user_id)
+            await callback_query.message.edit_text(
+                "Отправитель указал ваше имя в заказе. "
+                "Вы можете подписаться на уведомления о заказе или просто игнорировать сообщение.",
+                reply_markup=get_customer_keyboard()
+            )
+        else:
+            await callback_query.answer("Заказы с вашим именем не найдены.")
+    else:
+        await callback_query.answer("Ваше имя пользователя отсутствует в Telegram.")
+
+@main_router.callback_query(F.data == 'subscribe')
+async def subscribe_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    if not is_session_active(user_id):
+        await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
+        return
+
+    # Обновляем статус подписки
+    user_sessions[user_id]['subscribed'] = True
+    update_session_activity(user_id)
+    await callback_query.answer("Вы подписаны на уведомления о заказе.")
 
 @main_router.callback_query(F.data == 'salesman')
 async def salesman_callback(callback_query: types.CallbackQuery):
@@ -125,20 +152,6 @@ async def salesman_callback(callback_query: types.CallbackQuery):
     user_sessions[user_id]['role'] = 'salesman'
     update_session_activity(user_id)
     await callback_query.message.edit_text("Для выполнения действий, пожалуйста, авторизуйтесь:", reply_markup=get_salesman_keyboard())
-
-@main_router.callback_query(F.data == 'customer')
-async def customer_callback(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    if not is_session_active(user_id):
-        await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
-        return
-    user_sessions[user_id]['role'] = 'customer'
-    update_session_activity(user_id)
-    await callback_query.message.edit_text("Отправитель указал ваше имя в заказе. "
-        "Вы можете подписаться на уведомления о заказе или просто игнорировать сообщение.",
-        reply_markup=get_customer_keyboard()
-    )
-
 
 @main_router.message(Command(commands=['login']))
 async def login_command(message: types.Message):
