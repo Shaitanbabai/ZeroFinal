@@ -7,6 +7,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
+
 from django_lifecycle import LifecycleModel, hook, AFTER_CREATE, AFTER_UPDATE
 
 from telegram_bot.keyboards import get_customer_keyboard
@@ -78,6 +79,7 @@ class Order(LifecycleModel):
     telegram_key = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_CONFIRMED)
     status_datetime = models.DateTimeField(auto_now_add=True)
+
 
     @hook(AFTER_CREATE)
     def notify_creation(self):

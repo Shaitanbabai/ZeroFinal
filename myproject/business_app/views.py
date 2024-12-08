@@ -8,6 +8,7 @@ import datetime
 from datetime import timedelta
 import pytz
 
+
 # Импорты для анализа базы данных и визуализации
 from django.db.models import Count, Sum, Max, Avg
 import pandas as pd
