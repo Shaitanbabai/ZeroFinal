@@ -4,16 +4,23 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+
+from django_lifecycle import LifecycleModel, hook, AFTER_CREATE, AFTER_UPDATE
 
 from telegram_bot.keyboards import get_customer_keyboard
 from telegram_bot.models import TelegramUser
-# from telegram_bot.notifications import send_telegram_message
-
-from django.utils import timezone
 
 from telegram_bot.notifications_telegram_key import send_telegram_message
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logging.basicConfig(
+    level=logging.INFO,  # Уровень логирования
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Формат сообщения
+    handlers=[
+        logging.StreamHandler()          # Логирование в терминал
+    ]
+)
 
 # Create your models here.
 class Product(models.Model):
@@ -45,13 +52,11 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
 
 
-class Order(models.Model):
-    DoesNotExist = None
-    objects = None
+class Order(LifecycleModel):
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
     STATUS_DELIVERY = 'delivery'
-    STATUS_CANCELED = 'cancelled'
+    STATUS_CANCELED = 'canceled'
     STATUS_COMPLETED = 'completed'
 
     STATUS_CHOICES = [
@@ -63,7 +68,7 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    items = models.ManyToManyField(Product, through=OrderItem, related_name='orders')
+    items = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
     total_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     phone = models.CharField(max_length=12)
     address = models.TextField(max_length=120)
@@ -71,6 +76,44 @@ class Order(models.Model):
     telegram_key = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_CONFIRMED)
     status_datetime = models.DateTimeField(auto_now_add=True)
+
+    @hook(AFTER_CREATE)
+    def notify_creation(self):
+        logging.debug(f"Attempting to notify user for Order ID: {self.id}")
+        from telegram_bot.models import TelegramUser
+        telegram_username = self.telegram_key
+        if telegram_username:
+            try:
+                user = TelegramUser.objects.filter(username=telegram_username).first()
+                if user:
+                    logging.debug(f"Found Telegram user {user.username}")
+                    message = f"Ваш заказ с ID {self.id} создан и подтвержден."
+                    reply_markup = get_customer_keyboard()
+                    send_telegram_message(user.chat_id, message, reply_markup)
+                else:
+                    logging.warning(f"No Telegram user found for username {telegram_username}")
+            except Exception as e:
+                logging.error(f"Error notifying user {telegram_username}: {e}")
+
+    @hook(AFTER_UPDATE, when='status', has_changed=True)
+    def notify_status_change(self):
+        logging.debug(f"notify_status_change called for Order ID: {self.id}, new status: {self.status}")
+        from telegram_bot.models import TelegramUser
+        telegram_username = self.telegram_key
+        if telegram_username:
+            try:
+                user = TelegramUser.objects.filter(username=telegram_username).first()
+                if user:
+                    message = (
+                        f"Ваш заказ с ID {self.id} завершен."
+                        if self.status == self.STATUS_COMPLETED
+                        else f"Статус вашего заказа с ID {self.id} изменился на {self.status}."
+                    )
+                    send_telegram_message(user.chat_id, message)
+                else:
+                    logging.warning(f"No Telegram user found for username {telegram_username}")
+            except Exception as e:
+                logging.error(f"Error notifying user {telegram_username}: {e}")
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
 #
