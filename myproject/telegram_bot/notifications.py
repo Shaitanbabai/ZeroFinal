@@ -18,6 +18,7 @@ from aiogram.filters import Command
 from asgiref.sync import sync_to_async
 from PIL import Image
 
+from business_app.models import Order
 from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
 
@@ -212,13 +213,13 @@ async def send_current_orders(chat_id):
 
 
 async def subscribe(message: types.Message):
-    from business_app.models import Order
     """Обрабатывает команду /subscribe для подписки пользователя на уведомления."""
     chat_id = message.chat.id
     telegram_username = f"@{message.from_user.username}"
 
     try:
         orders = Order.objects.filter(telegram_key=telegram_username)
+
         if orders.exists():
             TelegramUser.objects.update_or_create(
                 username=telegram_username,
@@ -227,38 +228,11 @@ async def subscribe(message: types.Message):
             await message.reply("Вы подписались на уведомления о статусах ваших заказов.")
         else:
             await message.reply("Не найден заказ, связанный с вашим именем пользователя.")
+
     except Exception as e:
         logging.error(f"Error subscribing user {telegram_username}: {e}")
         await message.reply("Произошла ошибка при подписке.")
 
-
-# @receiver(post_save, sender=Order)
-# def notify_order_status_change(sender, instance, created, **kwargs):
-#     print("Signal received")
-#     logging.debug("Signal received")
-#     telegram_username = instance.telegram_key
-#     logging.debug(f"Searching for Telegram user with username: {telegram_username}")
-#     if telegram_username:
-#         try:
-#             user = TelegramUser.objects.filter(username=telegram_username).first()
-#             logging.debug(f"User found: {user}")
-#             if user:
-#                 logging.debug(f"Order created: {created}, Order status: {instance.status}")
-#                 if created:
-#                     message = "Ваш заказ создан. Подпишитесь для отслеживания статуса."
-#                     reply_markup = get_customer_keyboard()
-#                 else:
-#                     if instance.status == "completed":
-#                         message = f"Ваш заказ с ID {instance.id} завершен."
-#                     else:
-#                         message = f"Статус вашего заказа с ID {instance.id} изменился на {instance.status}."
-#                     reply_markup = None
-#
-#                 send_telegram_message(user.chat_id, message, reply_markup)
-#             else:
-#                 logging.warning(f"No Telegram user found for username {telegram_username}")
-#         except Exception as e:
-#             logging.error(f"Error notifying user {telegram_username}: {e}")
 
 def register_notifications(main_router: Router):
     main_router.include_router(router)

@@ -1,5 +1,14 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+def convert_to_dict(inline_keyboard_markup):
+    """ Конвертация aiogram InlineKeyboardMarkup в словарь, совместимый с Telegram API. """
+    return {
+        "inline_keyboard": [
+            [{"text": button.text, "callback_data": button.callback_data} for button in row]
+            for row in inline_keyboard_markup.inline_keyboard
+        ]
+    }
+
 def get_start_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [

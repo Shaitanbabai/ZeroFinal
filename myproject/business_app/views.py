@@ -617,23 +617,30 @@ def manage_orders(request, order_id, action):
     order = get_object_or_404(Order, id=order_id)
     logger.debug('Current order status: %s', order.status)
 
-    with transaction.atomic():
-        if action == 'confirm' and order.status == Order.STATUS_PENDING:
-            order.status = Order.STATUS_CONFIRMED
-        elif action == 'deliver' and order.status == Order.STATUS_CONFIRMED:
-            order.status = Order.STATUS_DELIVERY
-        elif action == 'complete' and order.status == Order.STATUS_DELIVERY:
-            order.status = Order.STATUS_COMPLETED
-        elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
-            order.status = Order.STATUS_CANCELED
-        else:
-            logger.warning('Invalid action or status for order_id=%s: action=%s, status=%s', order_id, action, order.status)
+    new_status = None
 
-        order.status_datetime = timezone.now()
-        order.save()
+    if action == 'confirm' and order.status == Order.STATUS_PENDING:
+        new_status = Order.STATUS_CONFIRMED
+    elif action == 'deliver' and order.status == Order.STATUS_CONFIRMED:
+        new_status = Order.STATUS_DELIVERY
+    elif action == 'complete' and order.status == Order.STATUS_DELIVERY:
+        new_status = Order.STATUS_COMPLETED
+    elif action == 'cancel' and order.status in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
+        new_status = Order.STATUS_CANCELED
+    else:
+        logger.warning('Invalid action or status for order_id=%s: action=%s, status=%s', order_id, action, order.status)
 
-    logger.debug('Order %s updated to status %s', order_id, order.status)
+    if new_status and new_status != order.status:
+        with transaction.atomic():
+            order.status = new_status
+            order.status_datetime = timezone.now()
+            order.save()
+            logger.debug('Order %s updated to status %s', order_id, order.status)
+    else:
+        logger.debug('No status change for order %s', order_id)
+
     return redirect('sale')
+
 
 
 """ Методы анализа и визуализации данных"""

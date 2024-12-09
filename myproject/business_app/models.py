@@ -2,6 +2,7 @@ import logging
 import os
 
 from django.db import models
+from django.db import transaction
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -12,7 +13,7 @@ from django_lifecycle import LifecycleModel, hook, AFTER_CREATE, AFTER_UPDATE
 
 from telegram_bot.keyboards import get_customer_keyboard
 from telegram_bot.models import TelegramUser
-
+from telegram_bot.keyboards import convert_to_dict
 from telegram_bot.notifications_telegram_key import send_telegram_message
 
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
@@ -95,7 +96,9 @@ class Order(LifecycleModel):
                         logging.debug(f"Found Telegram user {user.username}")
                         message = f"Для вас есть заказ с ID {self.id} в статусе confirmed."
                         reply_markup = get_customer_keyboard()
-                        send_telegram_message(user.chat_id, message, reply_markup)
+                        # Конвертируем клавиатуру в словарь
+                        reply_markup_dict = convert_to_dict(reply_markup)
+                        send_telegram_message(user.chat_id, message, reply_markup_dict)
                     else:
                         logging.warning(f"No Telegram user found for username {telegram_username}")
                 except Exception as e:
@@ -107,22 +110,13 @@ class Order(LifecycleModel):
 
     @hook(AFTER_UPDATE, when='status', has_changed=True)
     def notify_status_change(self):
-        logging.debug(f"notify_status_change called for Order ID: {self.id}, new status: {self.status}")
-        from telegram_bot.models import TelegramUser
-        telegram_username = self.telegram_key
-        if telegram_username:
-            try:
-                user = TelegramUser.objects.filter(username=telegram_username).first()
-                if user:
-                    message = (f"Ваш заказ с ID {self.id} завершен."
-                        if self.status == self.STATUS_COMPLETED
-                        else f"Статус вашего заказа с ID {self.id} изменился на {self.status}."
-                    )
-                    send_telegram_message(user.chat_id, message)
-                else:
-                    logging.warning(f"No Telegram user found for username {telegram_username}")
-            except Exception as e:
-                logging.error(f"Error notifying user {telegram_username}: {e}")
+        send_message_response = send_telegram_message(
+            chat_id=self.telegram_key,
+            text=f"Ваш заказ с ID {self.pk} завершен." if self.status == self.STATUS_COMPLETED
+            else f"Статус вашего заказа с ID {self.id} изменился на {self.status}."
+        )
+        if not send_message_response.ok:
+            print(f"Error notifying user {self.telegram_key}: {send_message_response.json()}")
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
 #
