@@ -1,12 +1,6 @@
 import logging
 import os
 
-# import requests
-# from pathlib import Path
-
-# from django.db.models.signals import post_save
-# from django.dispatch import receiver
-# from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
 
@@ -21,8 +15,8 @@ from PIL import Image
 from business_app.models import Order
 from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
+from telegram_bot.keyboards import get_sales_report_reply_keyboard
 
-# from telegram_bot.keyboards import get_customer_keyboard
 
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 

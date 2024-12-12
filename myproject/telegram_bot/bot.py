@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import BotCommand
+from aiogram.types import CallbackQuery
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.bot import DefaultBotProperties
 from aiogram.filters import Command
@@ -21,9 +21,8 @@ from telegram_bot.keyboards import (
     get_start_keyboard,
     get_salesman_keyboard,
     get_customer_keyboard, convert_to_dict,
-    get_sales_report_keyboard,
+    get_sales_report_reply_keyboard,
 )
-
 
 # Загрузка переменных окружения из .env файла
 load_dotenv()
@@ -61,6 +60,7 @@ from telegram_bot.notifications import register_notifications
 from telegram_bot.notifications import login as perform_login
 register_notifications(main_router)  # Регистрация роутеров из notifications.py
 
+
 # Экспортируем необходимые объекты
 __all__ = ['bot', 'dp', 'main_router']
 
@@ -73,6 +73,7 @@ SESSION_TIMEOUT = 60
 
 user_sessions = {}
 
+# Проверка активности сессии
 def is_session_active(user_id):
     session = user_sessions.get(user_id)
     if not session:
@@ -82,6 +83,7 @@ def is_session_active(user_id):
         return False
     return (timezone.now() - last_activity) < timedelta(minutes=SESSION_TIMEOUT)
 
+# Обновление активности сессии
 def update_session_activity(user_id):
     if user_id in user_sessions:
         user_sessions[user_id]['last_activity'] = timezone.now()
@@ -154,6 +156,8 @@ async def salesman_callback(callback_query: types.CallbackQuery):
     update_session_activity(user_id)
     await callback_query.message.edit_text("Для выполнения действий, пожалуйста, авторизуйтесь:", reply_markup=get_salesman_keyboard())
 
+""" Обработка авторизации """
+
 @main_router.message(Command(commands=['login']))
 async def login_command(message: types.Message):
     user_id = message.from_user.id
@@ -195,18 +199,38 @@ async def login_callback(callback_query: types.CallbackQuery):
 #     user_sessions[user_id] = {'subscribed': True}
 #     await callback_query.message.edit_text("Вы успешно подписаны на уведомления.")
 #
-# @main_router.callback_query(F.data == 'reports')
-# async def reports_callback(callback_query: types.CallbackQuery):
-#     user_id = callback_query.from_user.id
+
+
+# # Вспомогательная функция для обработки команды /reports
+# async def handle_reports(user_id, send_message):
+#     # Проверяем активность сессии
 #     if not is_session_active(user_id):
-#         await callback_query.answer("Ваша сессия истекла. Пожалуйста, начните заново.")
+#         await send_message("Ваша сессия истекла. Пожалуйста, начните заново.")
 #         return
+#
+#     # Получаем текущую сессию пользователя
 #     session = user_sessions.get(user_id)
+#
+#     # Проверяем права пользователя и его подписку
 #     if session.get('role') == 'salesman' and session.get('subscribed'):
 #         update_session_activity(user_id)
-#         await callback_query.message.edit_text("Выберите отчет:", reply_markup=get_sales_report_keyboard())
+#         await send_message("Выберите отчет:", reply_markup=get_sales_report_keyboard())
 #     else:
-#         await callback_query.answer("У вас нет прав для выполнения этой команды.")
+#         # Если пользователь не имеет прав, перенаправляем его на команду /login
+#         await send_message("У вас нет прав для выполнения этой команды. Перенаправляем на страницу входа...")
+#         await send_message("/login")
+#
+# # Обработчик для текстовой команды /reports
+# @main_router.message(Command(commands=['reports']))
+# async def reports_command(message: types.Message):
+#     user_id = message.from_user.id
+#     await handle_reports(user_id, message.answer)
+#
+# # Обработчик для нажатия кнопки с данными 'reports'
+# @main_router.callback_query(F.data == 'reports')
+# async def reports_callback(callback_query: CallbackQuery):
+#     user_id = callback_query.from_user.id
+#     await handle_reports(user_id, callback_query.message.edit_text)
 
 async def main():
     # await set_commands(bot)

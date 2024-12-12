@@ -1,9 +1,14 @@
 import logging
-from aiogram import types, Router, F
+import datetime
+from datetime import timedelta
+from aiogram import types, Router
+from aiogram.filters.callback_data import CallbackData
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
 from telegram_bot.reports import generate_report
+from telegram_bot.keyboards import get_sales_report_reply_keyboard
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -12,39 +17,46 @@ logger = logging.getLogger(__name__)
 report_router = Router()
 
 
-""" Роутреы обработки отчетов о продажах """
-
 class ReportStates(StatesGroup):
-    """Класс состояний для выбора периода отчета."""
     start_date = State()
     end_date = State()
 
-@report_router.callback_query(F.data == 'report_date_range')
-async def report_date_range_handler(callback_query: types.CallbackQuery, state: FSMContext):
-    """Обрабатывает начало выбора диапазона дат для отчета.
+class ReportCallbackData(CallbackData, prefix="report"):
+    action: str
 
-    Args:
-        callback_query (types.CallbackQuery): Объект callback запроса.
-        state (FSMContext): Контекст конечного автомата состояний.
-    """
-    try:
+@report_router.callback_query(lambda c: c.data.startswith("report_"))
+async def process_report_callback(callback_query: types.CallbackQuery, state: FSMContext):
+    callback_data = callback_query.data
+    start_date = None
+    end_date = datetime.datetime.now()
+
+    if callback_data == "report_today":
+        start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif callback_data == "report_week":
+        start_date = end_date - timedelta(days=7)
+    elif callback_data == "report_month":
+        start_date = end_date - timedelta(days=30)
+    elif callback_data == "report_custom":
         await callback_query.message.answer(
             "Выберите начальную дату:",
             reply_markup=await SimpleCalendar().start_calendar()
         )
         await state.set_state(ReportStates.start_date)
         logger.info("Начало выбора даты для отчета")
-    except Exception as e:
-        logger.error(f"Ошибка в report_date_range_handler: {e}")
-        await callback_query.message.answer("Произошла ошибка при выборе начальной даты. Попробуйте снова.")
+        return
 
+    if start_date:
+        text_report, chart = generate_report(start_date, end_date)
+        await callback_query.message.answer(text_report)
+        await callback_query.message.answer_photo(photo=chart)
+
+    await callback_query.answer()
 
 @report_router.callback_query(SimpleCalendarCallback.filter())
 async def process_start_date(callback_query: types.CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
     current_state = await state.get_state()
 
     if current_state == ReportStates.start_date:
-        """Обрабатывает выбор начальной даты."""
         try:
             selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
             if selected:
@@ -64,7 +76,6 @@ async def process_end_date(callback_query: types.CallbackQuery, callback_data: S
     current_state = await state.get_state()
 
     if current_state == ReportStates.end_date:
-        """Обрабатывает выбор конечной даты и генерацию отчета."""
         try:
             selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
             if selected:
@@ -73,13 +84,9 @@ async def process_end_date(callback_query: types.CallbackQuery, callback_data: S
                 end_date = date
                 await state.clear()
 
-                # Генерация отчета
                 text_report, chart = generate_report(start_date, end_date)
 
-                # Отправка текстового отчета пользователю
                 await callback_query.message.answer(text_report)
-
-                # Отправка диаграммы пользователю
                 await callback_query.message.answer_photo(photo=chart)
 
         except Exception as e:
@@ -87,6 +94,11 @@ async def process_end_date(callback_query: types.CallbackQuery, callback_data: S
             await callback_query.message.answer("Произошла ошибка при выборе конечной даты. Попробуйте снова.")
 
 
-# Функция для регистрации всех обработчиков
+@report_router.message(Command("show_reports"))  # команда вызова отчетов
+async def show_reports(message: types.Message):
+    logging.info("Команда /show_reports получена")
+    keyboard = get_sales_report_reply_keyboard()
+    await message.answer("Выберите отчет:", reply_markup=keyboard)
+
 def register_handlers(main_router: Router):
     main_router.include_router(report_router)

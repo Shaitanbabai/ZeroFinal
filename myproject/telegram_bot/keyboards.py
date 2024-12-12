@@ -1,4 +1,5 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+
 
 def convert_to_dict(inline_keyboard_markup):
     """ Конвертация aiogram InlineKeyboardMarkup в словарь, совместимый с Telegram API. """
@@ -35,24 +36,20 @@ def get_salesman_keyboard():
     return keyboard
 
 
+def get_sales_report_reply_keyboard():
+    # Создаем список списков с кнопками
+    buttons = [
+        [KeyboardButton("Отчет за сегодня")],
+        [KeyboardButton("Отчет за 7 дней")],
+        [KeyboardButton("Отчет за месяц")],
+        [KeyboardButton("Настраиваемый отчет")]
+    ]
 
-def get_sales_report_keyboard():
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Отчет за сегодня", callback_data="report_today"),
-            InlineKeyboardButton(text="Отчет за 7 дней", callback_data="report_week")
-        ],
-        [
-            InlineKeyboardButton(text="Отчет за месяц", callback_data="report_month"),
-            InlineKeyboardButton(text="Настраиваемый отчет", callback_data="report_custom")
-        ]
-    ])
+    # Создаем клавиатуру с кнопками
+    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
     return keyboard
 
 # def get_reports_keyboard():
-#     """
-#     Возвращает клавиатуру для выбора отчетов по продажам.
-#     """
 #     keyboard = InlineKeyboardMarkup(row_width=1)
 #     today_report_button = InlineKeyboardButton(text="Отчет за сегодня", callback_data="report_today")
 #     week_report_button = InlineKeyboardButton(text="Отчет за 7 дней", callback_data="report_week")
