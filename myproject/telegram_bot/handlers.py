@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
 from telegram_bot.reports import generate_report
-from telegram_bot.keyboards import get_sales_report_reply_keyboard
+from telegram_bot.keyboards import get_sales_report_inline_keyboard
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ async def process_end_date(callback_query: types.CallbackQuery, callback_data: S
 @report_router.message(Command("show_reports"))  # команда вызова отчетов
 async def show_reports(message: types.Message):
     logging.info("Команда /show_reports получена")
-    keyboard = get_sales_report_reply_keyboard()
+    keyboard = get_sales_report_inline_keyboard()
     await message.answer("Выберите отчет:", reply_markup=keyboard)
 
 def register_handlers(main_router: Router):

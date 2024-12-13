@@ -6,13 +6,14 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import pytz
 
-from aiogram import Router
+
+# from aiogram import Router
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
 
-# Создание роутера для обработки сообщений и событий
-report_router = Router()
+# # Создание роутера для обработки сообщений и событий
+# report_router = Router()
 
 
 def fetch_order_data(start_date, end_date):
@@ -34,6 +35,7 @@ def fetch_order_data(start_date, end_date):
 
     logger.info(f"Fetched {len(data)} order items")
     return pd.DataFrame(data)
+
 
 def generate_report(start_date, end_date):
     logger.info(f"Generating report from {start_date} to {end_date}")

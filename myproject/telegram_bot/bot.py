@@ -21,7 +21,7 @@ from telegram_bot.keyboards import (
     get_start_keyboard,
     get_salesman_keyboard,
     get_customer_keyboard, convert_to_dict,
-    get_sales_report_reply_keyboard,
+    get_sales_report_inline_keyboard,
 )
 
 # Загрузка переменных окружения из .env файла

@@ -15,7 +15,7 @@ from PIL import Image
 from business_app.models import Order
 from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
-from telegram_bot.keyboards import get_sales_report_reply_keyboard
+from telegram_bot.keyboards import get_sales_report_inline_keyboard
 
 
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')

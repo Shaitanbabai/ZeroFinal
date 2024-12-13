@@ -36,23 +36,28 @@ def get_salesman_keyboard():
     return keyboard
 
 
-def get_sales_report_reply_keyboard():
-    # Создаем список списков с кнопками
+# def get_sales_report_reply_keyboard():
+#     # Создаем список списков с кнопками - для смены типа клавиатуры надо изменить импорты функций get_sales_report
+#     buttons = [
+#         [KeyboardButton(text="Отчет за сегодня")],
+#         [KeyboardButton(text="Отчет за 7 дней")],
+#         [KeyboardButton(text="Отчет за месяц")],
+#         [KeyboardButton(text="Настраиваемый отчет")]
+#     ]
+#
+#     # Создаем клавиатуру с кнопками
+#     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+#     return keyboard
+
+def get_sales_report_inline_keyboard():
+    # Создаем инлайн-кнопки с callback_data
     buttons = [
-        [KeyboardButton("Отчет за сегодня")],
-        [KeyboardButton("Отчет за 7 дней")],
-        [KeyboardButton("Отчет за месяц")],
-        [KeyboardButton("Настраиваемый отчет")]
+        [InlineKeyboardButton(text="Отчет за сегодня", callback_data="report_today")],
+        [InlineKeyboardButton(text="Отчет за 7 дней", callback_data="report_7_days")],
+        [InlineKeyboardButton(text="Отчет за месяц", callback_data="report_month")],
+        [InlineKeyboardButton(text="Настраиваемый отчет", callback_data="custom_report")]
     ]
 
-    # Создаем клавиатуру с кнопками
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    # Создаем инлайн-клавиатуру с кнопками
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
-
-# def get_reports_keyboard():
-#     keyboard = InlineKeyboardMarkup(row_width=1)
-#     today_report_button = InlineKeyboardButton(text="Отчет за сегодня", callback_data="report_today")
-#     week_report_button = InlineKeyboardButton(text="Отчет за 7 дней", callback_data="report_week")
-#     month_report_button = InlineKeyboardButton(text="Отчет за месяц", callback_data="report_month")
-#     keyboard.add(today_report_button, week_report_button, month_report_button)
-#     return keyboard
