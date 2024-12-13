@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 def convert_to_dict(inline_keyboard_markup):
@@ -52,10 +52,10 @@ def get_salesman_keyboard():
 def get_sales_report_inline_keyboard():
     # Создаем инлайн-кнопки с callback_data
     buttons = [
-        [InlineKeyboardButton(text="Отчет за сегодня", callback_data="report_today")],
-        [InlineKeyboardButton(text="Отчет за 7 дней", callback_data="report_7_days")],
-        [InlineKeyboardButton(text="Отчет за месяц", callback_data="report_month")],
-        [InlineKeyboardButton(text="Настраиваемый отчет", callback_data="custom_report")]
+        [InlineKeyboardButton(text="Отчет за сегодня", callback_data="report_today"),
+         InlineKeyboardButton(text="Отчет за 7 дней", callback_data="report_7_days")],
+        [InlineKeyboardButton(text="Отчет за месяц", callback_data="report_month"),
+         InlineKeyboardButton(text="Настраиваемый отчет", callback_data="custom_report")]
     ]
 
     # Создаем инлайн-клавиатуру с кнопками

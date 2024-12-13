@@ -27,98 +27,137 @@ generate_report = sync_to_async(generate_report_sync, thread_sensitive=True)
 report_router = Router()
 
 
+# Определение класса состояний для машины состояний
 class ReportStates(StatesGroup):
-    start_date = State()
-    end_date = State()
+    start_date = State()  # Состояние для выбора начальной даты
+    end_date = State()    # Состояние для выбора конечной даты
 
+# Определение класса для обработки callback данных, связанных с отчетами
 class ReportCallbackData(CallbackData, prefix="report"):
-    action: str
+    action: str  # Действие, связанное с отчетом
 
-
+# Обработчик callback-запросов, начинающихся с "report_"
 @report_router.callback_query(lambda c: c.data.startswith("report_"))
 async def process_report_callback(callback_query: CallbackQuery, state: FSMContext):
-    logging.info("Обработка callback data: %s", callback_query.data)
     try:
+        # Получаем данные из callback-запроса
         callback_data = callback_query.data
-        start_date = None
-        end_date = datetime.datetime.now()
+        start_date = None  # Начальная дата отчета (по умолчанию None)
+        end_date = datetime.datetime.now()  # Конечная дата отчета (текущая дата и время)
 
+        # Определяем начальную дату в зависимости от выбранного действия
         if callback_data == "report_today":
+            # Если отчет за сегодня, устанавливаем начало дня
             start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
         elif callback_data == "report_week":
-            start_date = end_date - timedelta(days=7)
+            # Если отчет за неделю, вычитаем 7 дней от текущей даты
+            start_date = end_date - datetime.timedelta(days=7)
         elif callback_data == "report_month":
-            start_date = end_date - timedelta(days=30)
+            # Если отчет за месяц, вычитаем 30 дней от текущей даты
+            start_date = end_date - datetime.timedelta(days=30)
         elif callback_data == "report_custom":
+            # Если пользователь выбрал пользовательский диапазон, запрашиваем начальную дату
             await callback_query.message.answer(
                 "Выберите начальную дату:",
                 reply_markup=await SimpleCalendar().start_calendar()
             )
-            await state.set_state(ReportStates.start_date)
+            await state.set_state(ReportStates.start_date)  # Устанавливаем состояние выбора начальной даты
             return
 
+        # Если начальная дата определена
         if start_date:
+            # Логируем информацию о диапазоне дат
+            logger.info(f"Fetching data from {start_date} to {end_date}")
+            # Асинхронно получаем данные заказов за указанный период
             df = await sync_to_async(fetch_order_data)(start_date, end_date)
-            text_report, chart = await generate_report(df)
-            await callback_query.message.answer(text_report)
+            if df.empty:
+                # Если данных нет, отправляем сообщение пользователю
+                await callback_query.message.answer("Нет данных для отчета за указанный период.")
+            else:
+                # Генерируем текстовый отчет и диаграмму
+                text_report, chart = await generate_report(df)
+                # Отправляем текстовый отчет пользователю
+                await callback_query.message.answer(text_report)
 
-            if chart:
-                # Создайте объект BufferedInputFile, передавая поток и имя файла
-                photo = BufferedInputFile(chart.getvalue(), filename='pie_chart.png')
-                await callback_query.message.answer_photo(photo=photo)
+                if chart:
+                    # Если диаграмма создана, отправляем ее как фото
+                    photo = BufferedInputFile(chart.getvalue(), filename='pie_chart.png')
+                    await callback_query.message.answer_photo(photo=photo)
 
-        await callback_query.answer()
-    except TelegramAPIError as e:
-        logging.error("Ошибка Telegram API: %s", e)
-        await callback_query.message.answer("Произошла ошибка при обработке запроса. Попробуйте позже.")
+
     except Exception as e:
-        logging.exception("Неизвестная ошибка: %s", e)
-        await callback_query.message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+        # Логируем и отправляем сообщение об ошибке в случае исключения
+        logger.exception("An unexpected error occurred: %s", e)
+        await callback_query.message.answer("Произошла ошибка при обработке запроса отчета.")
+
+    finally:
+        # Отправляем ответ на callback-запрос
+        await callback_query.answer()
+
 
 @report_router.callback_query(SimpleCalendarCallback.filter())
-async def process_calendar_selection(callback_query: CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
-    logging.info("Обработка выбора календаря.")
+async def process_start_date(callback_query: CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
     try:
-        selected, selected_date = await SimpleCalendar().process_selection(callback_query, callback_data)
+        # Получение текущего состояния
         current_state = await state.get_state()
 
-        if not selected:
-            await callback_query.answer()
-            return
-
         if current_state == ReportStates.start_date:
-            await state.update_data(start_date=selected_date)
-            await callback_query.message.answer(
-                "Выберите конечную дату:",
-                reply_markup=await SimpleCalendar().start_calendar()
-            )
-            await state.set_state(ReportStates.end_date)
-        elif current_state == ReportStates.end_date:
-            data = await state.get_data()
-            start_date = data.get("start_date")
-            end_date = selected_date
+            # Обработка выбора начальной даты
+            selected, selected_date = await SimpleCalendar().process_selection(callback_query, callback_data)
+            if selected:
+                # Обновление данных состояния с выбранной датой
+                await state.update_data(start_date=selected_date)
+                # Запрос выбора конечной даты
+                await callback_query.message.answer("Выберите конечную дату:",
+                                                    reply_markup=await SimpleCalendar().start_calendar())
+                # Установка состояния для выбора конечной даты
+                await state.set_state(ReportStates.end_date)
+            await callback_query.answer()
 
-            if end_date < start_date:
-                await callback_query.message.answer("Конечная дата не может быть раньше начальной. Попробуйте снова.")
-                await callback_query.answer()
-                return
-
-            await state.clear()
-
-            text_report, chart = await generate_report(start_date, end_date)
-            await callback_query.message.answer(text_report)
-
-            if chart:
-                photo = BufferedInputFile(chart.getvalue(), filename='pie_chart.png')
-                await callback_query.message.answer_photo(photo=photo)
-
-        await callback_query.answer()
-    except TelegramAPIError as e:
-        logging.error("Ошибка Telegram API: %s", e)
-        await callback_query.message.answer("Произошла ошибка при обработке выбора даты. Попробуйте позже.")
     except Exception as e:
-        logging.exception("Неизвестная ошибка: %s", e)
-        await callback_query.message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+        # Логирование ошибки
+        logger.error(f"Ошибка при обработке начальной даты: {e}")
+        await callback_query.message.answer("Произошла ошибка при обработке начальной даты. Попробуйте снова.")
+
+@report_router.callback_query(SimpleCalendarCallback.filter())
+async def process_end_date(callback_query: CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
+    try:
+        # Получение текущего состояния
+        current_state = await state.get_state()
+
+        if current_state == ReportStates.end_date:
+            # Обработка выбора конечной даты
+            selected, selected_date = await SimpleCalendar().process_selection(callback_query, callback_data)
+            if selected:
+                # Получение данных из состояния
+                data = await state.get_data()
+                start_date = data.get("start_date")
+                end_date = selected_date
+
+                # Проверка на корректность выбранных дат
+                if end_date < start_date:
+                    await callback_query.message.answer("Конечная дата не может быть раньше начальной. Попробуйте снова.")
+                    await callback_query.answer()
+                    return
+
+                # Очистка состояния
+                await state.clear()
+
+                # Генерация и отправка отчета
+                text_report, chart = await generate_report(start_date, end_date)
+                await callback_query.message.answer(text_report)
+
+                # Отправка графика, если он есть
+                if chart:
+                    photo = BufferedInputFile(chart.getvalue(), filename='pie_chart.png')
+                    await callback_query.message.answer_photo(photo=photo)
+
+            await callback_query.answer()
+    except Exception as e:
+        # Логирование ошибки
+        logger.error(f"Ошибка при обработке конечной даты: {e}")
+        await callback_query.message.answer("Произошла ошибка при обработке конечной даты. Попробуйте снова.")
+
 
 @report_router.message(Command("show_reports"))  # команда вызова отчетов
 async def show_reports(message: types.Message):

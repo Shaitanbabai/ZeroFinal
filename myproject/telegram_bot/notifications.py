@@ -17,7 +17,6 @@ from telegram_bot.models import TelegramUser
 from telegram_bot.bot import bot, dp  # Импортируем инициализированные объекты
 from telegram_bot.keyboards import get_sales_report_inline_keyboard
 
-
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -79,10 +78,7 @@ async def login(message: types.Message):
                     defaults={'is_authenticated': True, 'chat_id': message.chat.id}
                 )
                 auth_result = ("Вы успешно авторизовались, коллега. "
-
-                               "Если Вы всё еще видите свое сообщение с логином и паролем - "
-                               "удалите самостоятельно иначе вас заберет Пятниццо!"
-                               "\n\nА теперь посмотрим на фронт работ и отчеты об успехах.")
+                               "Теперь посмотрим на фронт работ и отчеты об успехах.")
                 # Отправляем сообщение только для продавцов
                 await message.reply(auth_result)
                 await send_current_orders(message.chat.id)
