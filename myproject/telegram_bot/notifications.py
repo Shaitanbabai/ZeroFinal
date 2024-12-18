@@ -156,7 +156,7 @@ async def send_current_orders(chat_id):
                                f"Сумма: {order.total_amount}\n"
                                f"Телефон: {order.phone}\n"
                                f"Комментарий: {order.comment or 'Нет'}\n"
-                               f"Датастатуса: {order.status_datetime}\n"
+                               f"Дата статуса: {order.status_datetime}\n"
                                f"Товары: {items_str}")
 
                     media_group = []

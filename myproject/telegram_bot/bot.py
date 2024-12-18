@@ -16,6 +16,7 @@ from aiogram import F
 from asgiref.sync import sync_to_async
 
 from business_app.models import Order
+from telegram_bot.models import TelegramUser
 from telegram_bot.handlers import register_handlers
 from telegram_bot.keyboards import (
     get_start_keyboard,
@@ -88,18 +89,37 @@ def update_session_activity(user_id):
     if user_id in user_sessions:
         user_sessions[user_id]['last_activity'] = timezone.now()
 
+
 @main_router.message(Command(commands=['start']))
 async def start_command(message: types.Message):
     user_id = message.from_user.id
+    username = message.from_user.username
+
+    # Оберните синхронную операцию в sync_to_async и используйте правильное поле
+    telegram_user, created = await sync_to_async(TelegramUser.objects.update_or_create)(
+        id=user_id,
+        defaults={'username': username}
+    )
+
+    if created:
+        print(f"New Telegram user created: {telegram_user}")
+    else:
+        if telegram_user.username != username:
+            telegram_user.username = username
+            await sync_to_async(telegram_user.save)()
+        print(f"Telegram user updated: {telegram_user}")
+
     if not is_session_active(user_id):
         user_sessions[user_id] = {
             'role': None,
             'subscribed': False,
             'last_activity': timezone.now()
         }
+        # Убедитесь, что get_start_keyboard() возвращает корректный объект клавиатуры
+        start_keyboard = get_start_keyboard()
         await message.answer(
             "Выберите вашу роль:",
-            reply_markup=get_start_keyboard()
+            reply_markup=start_keyboard
         )
     else:
         await message.answer("Вы уже выбрали роль в текущей сессии.")

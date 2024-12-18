@@ -8,7 +8,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-
 from django_lifecycle import LifecycleModel, hook, AFTER_CREATE, AFTER_UPDATE
 
 from telegram_bot.keyboards import get_customer_keyboard
@@ -57,6 +56,7 @@ class OrderItem(models.Model):
 
 
 class Order(LifecycleModel):
+    objects = None
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
     STATUS_DELIVERY = 'delivery'
@@ -78,31 +78,29 @@ class Order(LifecycleModel):
     address = models.TextField(max_length=120)
     comment = models.TextField(max_length=120, blank=True, null=True)
     telegram_key = models.CharField(max_length=100, blank=True, null=True)
+    telegram_id = models.CharField(max_length=50, blank=True, null=True)
+    telegram_user = models.ForeignKey('telegram_bot.TelegramUser', on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name='orders')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_CONFIRMED)
     status_datetime = models.DateTimeField(auto_now_add=True)
 
-
     @hook(AFTER_CREATE)
-    def notify_creation(self):
+    def notify_creation(self, telegram_user=None):
         from telegram_bot.models import TelegramUser
         logging.debug(f"Attempting to notify user for Order ID: {self.id}")
 
         if self.status == 'confirmed':
             telegram_username = self.telegram_key
             if telegram_username:
-                try:
-                    user = TelegramUser.objects.filter(username=telegram_username).first()
-                    if user:
-                        logging.debug(f"Found Telegram user {user.username}")
-                        message = f"Для вас есть заказ с ID {self.id} в статусе confirmed."
-                        reply_markup = get_customer_keyboard()
-                        # Конвертируем клавиатуру в словарь
-                        reply_markup_dict = convert_to_dict(reply_markup)
-                        send_telegram_message(user.chat_id, message, reply_markup_dict)
-                    else:
-                        logging.warning(f"No Telegram user found for username {telegram_username}")
-                except Exception as e:
-                    logging.error(f"Error notifying user {telegram_username}: {e}")
+                user = TelegramUser.objects.filter(username=telegram_username).first()
+                if user:
+                    logging.debug(f"Found Telegram user {user.username}")
+                    message = f"Для вас есть заказ с ID {self.id} в статусе confirmed."
+                    reply_markup = get_customer_keyboard()
+                    reply_markup_dict = convert_to_dict(reply_markup)
+                    send_telegram_message(chat_id=user.id, text=message, reply_markup=reply_markup_dict)
+                else:
+                    logging.warning(f"No Telegram user found for username {telegram_username}")
             else:
                 logging.warning("Telegram username is not set for this order.")
         else:
@@ -110,29 +108,18 @@ class Order(LifecycleModel):
 
     @hook(AFTER_UPDATE, when='status', has_changed=True)
     def notify_status_change(self):
-        send_message_response = send_telegram_message(
-            chat_id=self.telegram_key,
-            text=f"Ваш заказ с ID {self.pk} завершен." if self.status == self.STATUS_COMPLETED
-            else f"Статус вашего заказа с ID {self.id} изменился на {self.status}."
-        )
-        if not send_message_response.ok:
-            print(f"Error notifying user {self.telegram_key}: {send_message_response.json()}")
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
-#
-#     def change_status(self, new_status):
-#         self.status = new_status
-#         self.status_datetime = timezone.now()
-#         self.save()
-#         OrderStatusHistory.objects.create(order=self, status=new_status, status_datetime=self.status_datetime)
-#
-# class OrderStatusHistory(models.Model):
-#     order = models.ForeignKey('Order', related_name='status_history', on_delete=models.CASCADE)
-#     status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
-#     status_datetime = models.DateTimeField(default=timezone.now)
-#
-#     def __str__(self):
-#         return f"{self.order.id} - {self.status} at {self.status_datetime}"
+        from telegram_bot.models import TelegramUser
+        logging.debug(f"Attempting to notify user for status change of Order ID: {self.id}")
+
+        user = TelegramUser.objects.filter(username=self.telegram_key).first()
+        if user:
+            logging.debug(f"Found Telegram user {user.username}")
+            message = f"Статус вашего заказа с ID {self.id} изменился на {self.status}."
+            reply_markup = get_customer_keyboard()
+            reply_markup_dict = convert_to_dict(reply_markup)
+            send_telegram_message(chat_id=user.id, text=message, reply_markup=reply_markup_dict)
+        else:
+            logging.warning(f"No Telegram user found for username {self.telegram_key}")
 
 
 class Review(models.Model):
