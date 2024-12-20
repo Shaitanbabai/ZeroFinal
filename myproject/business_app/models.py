@@ -15,6 +15,7 @@ from telegram_bot.models import TelegramUser
 from telegram_bot.keyboards import convert_to_dict
 from telegram_bot.notifications_telegram_key import send_telegram_message
 
+
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 
 logging.basicConfig(
@@ -148,37 +149,37 @@ class Reply(models.Model):
         return f"Reply to review {self.review.id}"
 
 
-@receiver(post_save, sender=Order)
-def notify_order_status_change(sender, instance, created, **kwargs):
-    logging.debug(f"Signal for Order: created={created}, instance={instance}")
-    from telegram_bot.models import TelegramUser
-
-    telegram_username = instance.telegram_key
-    logging.debug(f"Searching for Telegram user with username: {telegram_username}")
-
-    if telegram_username:
-        try:
-            user = TelegramUser.objects.filter(username=telegram_username).first()
-            logging.debug(f"User found: {user}")
-
-            if user:
-                if created:
-                    # Если заказ создан, отправляем сообщение о создании
-                    message = f"Ваш заказ с ID {instance.id} создан и подтвержден."
-                    reply_markup = get_customer_keyboard()
-                else:
-                    # Если заказ обновлен, проверяем статус
-                    if instance.status == "completed":
-                        message = f"Ваш заказ с ID {instance.id} завершен."
-                    else:
-                        message = f"Статус вашего заказа с ID {instance.id} изменился на {instance.status}."
-                    reply_markup = None
-
-                send_telegram_message(user.chat_id, message, reply_markup)
-            else:
-                logging.warning(f"No Telegram user found for username {telegram_username}")
-        except Exception as e:
-            logging.error(f"Error notifying user {telegram_username}: {e}")
+# @receiver(post_save, sender=Order)
+# def notify_order_status_change(sender, instance, created, **kwargs):
+#     logging.debug(f"Signal for Order: created={created}, instance={instance}")
+#     from telegram_bot.models import TelegramUser
+#
+#     telegram_username = instance.telegram_key
+#     logging.debug(f"Searching for Telegram user with username: {telegram_username}")
+#
+#     if telegram_username:
+#         try:
+#             user = TelegramUser.objects.filter(username=telegram_username).first()
+#             logging.debug(f"User found: {user}")
+#
+#             if user:
+#                 if created:
+#                     # Если заказ создан, отправляем сообщение о создании
+#                     message = f"Ваш заказ с ID {instance.id} создан и подтвержден."
+#                     reply_markup = get_customer_keyboard()
+#                 else:
+#                     # Если заказ обновлен, проверяем статус
+#                     if instance.status == "completed":
+#                         message = f"Ваш заказ с ID {instance.id} завершен."
+#                     else:
+#                         message = f"Статус вашего заказа с ID {instance.id} изменился на {instance.status}."
+#                     reply_markup = None
+#
+#                 send_telegram_message(user_id=user.id, text=message, reply_markup=reply_markup)
+#             else:
+#                 logging.warning(f"No Telegram user found for username {telegram_username}")
+#         except Exception as e:
+#             logging.error(f"Error notifying user {telegram_username}: {e}")
 
 
 
